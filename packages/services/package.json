@@ -10,10 +10,13 @@
     "typescript": "^5.9.3"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1093.0",
+    "@aws-sdk/s3-request-presigner": "^3.1093.0",
     "@repo/database": "workspace:*",
     "@repo/logger": "workspace:*",
     "@trpc/server": "^11.8.1",
     "bcrypt": "^6.0.0",
+    "bullmq": "^5.81.0",
     "zod": "^4.3.5"
   }
 }
