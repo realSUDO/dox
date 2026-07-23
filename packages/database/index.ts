@@ -9,7 +9,7 @@ export const db =
     log: process.env.NODE_ENV === "development" ? ["query", "error"] : ["error"],
   });
 
-if (process.env.NODE_ENV !== "prod") globalForPrisma.prisma = db;
+if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = db;
 
 export * from "@prisma/client";
 export default db;
