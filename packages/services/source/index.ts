@@ -97,7 +97,7 @@ export class SourceService {
       },
     });
 
-    await queuesService.addIngestionJob(`ingest:${sourceId}:v${updatedSource.indexVersion}`, {
+    await queuesService.addExtractJob(`extract-${sourceId}-v${updatedSource.indexVersion}`, {
       sourceId,
       projectId: source.projectId,
       jobType: "ingest",
@@ -128,7 +128,7 @@ export class SourceService {
       },
     });
 
-    await queuesService.addIngestionJob(`ingest:${source.id}:v${source.indexVersion}`, {
+    await queuesService.addExtractJob(`extract-${source.id}-v${source.indexVersion}`, {
       sourceId: source.id,
       projectId: source.projectId,
       jobType: "ingest",
@@ -160,7 +160,7 @@ export class SourceService {
       },
     });
 
-    await queuesService.addIngestionJob(`ingest:${source.id}:v${source.indexVersion}`, {
+    await queuesService.addExtractJob(`extract-${source.id}-v${source.indexVersion}`, {
       sourceId: source.id,
       projectId: source.projectId,
       jobType: "ingest",
@@ -222,7 +222,7 @@ export class SourceService {
       },
     });
 
-    await queuesService.addIngestionJob(`delete_vectors:${sourceId}:v${updatedSource.indexVersion}`, {
+    await queuesService.addCleanupJob(`cleanup-${sourceId}-v${updatedSource.indexVersion}`, {
       sourceId,
       projectId: source.projectId,
       jobType: "delete_vectors",
@@ -263,7 +263,7 @@ export class SourceService {
       },
     });
 
-    await queuesService.addIngestionJob(`reindex:${sourceId}:v${updatedSource.indexVersion}`, {
+    await queuesService.addReindexJob(`reindex-${sourceId}-v${updatedSource.indexVersion}`, {
       sourceId,
       projectId: source.projectId,
       jobType: "reindex",

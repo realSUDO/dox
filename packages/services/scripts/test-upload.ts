@@ -13,8 +13,8 @@ async function testUpload() {
     endpoint,
     region,
     credentials: {
-      accessKeyId,
-      secretAccessKey,
+      accessKeyId: process.env.SPACES_KEY as string,
+      secretAccessKey: process.env.SPACES_SECRET as string,
     },
   });
 

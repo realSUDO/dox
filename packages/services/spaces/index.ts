@@ -1,5 +1,8 @@
-import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client, PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import fs from "node:fs";
+import { Readable } from "node:stream";
+import { finished } from "node:stream/promises";
 
 export class SpacesService {
   private client: S3Client | null = null;
@@ -37,6 +40,28 @@ export class SpacesService {
 
     const url = await getSignedUrl(this.client, command, { expiresIn });
     return url;
+  }
+
+  async downloadFile(key: string, downloadPath: string) {
+    if (!this.client) {
+      throw new Error("S3 Client not configured");
+    }
+
+    const command = new GetObjectCommand({
+      Bucket: this.bucket,
+      Key: key,
+    });
+
+    const response = await this.client.send(command);
+    if (!response.Body) {
+      throw new Error("No body in S3 response");
+    }
+
+    const writeStream = fs.createWriteStream(downloadPath);
+    const readStream = response.Body as Readable;
+    
+    readStream.pipe(writeStream);
+    await finished(writeStream);
   }
 }
 
