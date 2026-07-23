@@ -1,0 +1,234 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String    @id @default(uuid())
+  email        String    @unique @db.VarChar(255)
+  passwordHash String    @map("password_hash")
+  displayName  String?   @db.VarChar(100)
+  role         String    @default("user") @db.VarChar(20)
+  // role: "user" | "admin"
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  sessions         Session[]
+  ownedProjects    Project[]
+  projectMembers   ProjectMember[]
+  guardrailEvents  GuardrailEvent[]
+
+  @@map("users")
+}
+
+model Session {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  token     String   @unique
+  // token stored as SHA-256 hash of the raw cookie value
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  userAgent String?  @map("user_agent")
+  ipAddress String?  @db.VarChar(45) @map("ip_address")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, expiresAt])
+  @@map("sessions")
+}
+
+model Project {
+  id          String   @id @default(uuid())
+  ownerId     String   @map("owner_id")
+  name        String   @db.VarChar(200)
+  description String?
+  status      String   @default("active") @db.VarChar(20)
+  // status: "active" | "archived"
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  owner          User            @relation(fields: [ownerId], references: [id])
+  members        ProjectMember[]
+  sources        Source[]
+  chatSessions   ChatSession[]
+  guardrailEvents GuardrailEvent[]
+
+  @@index([ownerId])
+  @@map("projects")
+}
+
+model ProjectMember {
+  projectId String   @map("project_id")
+  userId    String   @map("user_id")
+  role      String   @default("viewer") @db.VarChar(20)
+  // role: "viewer" | "editor" | "owner"
+  joinedAt  DateTime @default(now()) @map("joined_at")
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([projectId, userId])
+  @@map("project_members")
+}
+
+model Source {
+  id             String    @id @default(uuid())
+  projectId      String    @map("project_id")
+  uploadedBy     String    @map("uploaded_by")
+
+  type           String    @db.VarChar(10)
+  // type: "file" | "link" | "text"
+
+  fileName       String?   @db.VarChar(500) @map("file_name")
+  mimeType       String?   @db.VarChar(100) @map("mime_type")
+  fileSizeBytes  BigInt?   @map("file_size_bytes")
+  storageKey     String?   @map("storage_key")
+
+  sourceUrl      String?   @map("source_url")
+  textContent    String?   @map("text_content")
+
+  status         String    @default("pending_upload") @db.VarChar(30)
+  // status: "pending_upload" | "queued" | "processing" | "embedding" | "indexed" | "reindex_queued" | "failed"
+
+  chunkCount     Int?      @map("chunk_count")
+  indexedAt      DateTime? @map("indexed_at")
+  indexVersion   Int       @default(1) @map("index_version")
+  lastError      String?   @map("last_error")
+
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+  deletedAt      DateTime? @map("deleted_at")
+
+  project       Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  chunks        Chunk[]
+  ingestionJobs IngestionJob[]
+
+  @@index([projectId])
+  @@index([status])
+  @@index([projectId, deletedAt])
+  @@map("sources")
+}
+
+model Chunk {
+  id             String   @id @default(uuid())
+  sourceId       String   @map("source_id")
+  projectId      String   @map("project_id")
+  indexVersion   Int      @default(1) @map("index_version")
+  chunkIndex     Int      @map("chunk_index")
+
+  content        String
+  // contentTsv is a generated column managed via raw migration
+  // Added manually in migration
+
+  pageNumber     Int?     @map("page_number")
+  startSeconds   Float?   @map("start_seconds")
+  endSeconds     Float?   @map("end_seconds")
+  timestampLabel String?  @db.VarChar(30) @map("timestamp_label")
+
+  qdrantPointId  String   @map("qdrant_point_id")
+
+  status         String   @default("pending") @db.VarChar(20)
+  // status: "pending" | "indexed" | "deleted"
+
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  source    Source     @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  citations Citation[]
+
+  @@index([sourceId])
+  @@index([projectId])
+  @@index([qdrantPointId])
+  @@map("chunks")
+}
+
+model ChatSession {
+  id        String   @id @default(uuid())
+  projectId String   @map("project_id")
+  userId    String   @map("user_id")
+  title     String?  @db.VarChar(300)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  project  Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  messages ChatMessage[]
+
+  @@map("chat_sessions")
+}
+
+model ChatMessage {
+  id               String   @id @default(uuid())
+  chatSessionId    String   @map("chat_session_id")
+  role             String   @db.VarChar(15)
+  // role: "user" | "assistant" | "system"
+  content          String
+  promptTokens     Int?     @map("prompt_tokens")
+  completionTokens Int?     @map("completion_tokens")
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  chatSession ChatSession @relation(fields: [chatSessionId], references: [id], onDelete: Cascade)
+  citations   Citation[]
+
+  @@index([chatSessionId])
+  @@map("chat_messages")
+}
+
+model Citation {
+  id           String   @id @default(uuid())
+  messageId    String   @map("message_id")
+  chunkId      String   @map("chunk_id")
+  sourceId     String   @map("source_id")
+  score        Float?
+  displayLabel String?  @db.VarChar(50) @map("display_label")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  message ChatMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  chunk   Chunk       @relation(fields: [chunkId], references: [id])
+
+  @@index([messageId])
+  @@map("citations")
+}
+
+model GuardrailEvent {
+  id        String   @id @default(uuid())
+  userId    String?  @map("user_id")
+  projectId String?  @map("project_id")
+  stage     String   @db.VarChar(20)
+  // stage: "input" | "output"
+  rule      String   @db.VarChar(100)
+  // rule: "prompt_injection" | "pii" | "unsafe_content" | "policy" | "ungrounded" | "unsafe_output"
+  action    String   @db.VarChar(20)
+  // action: "blocked" | "redacted" | "flagged"
+  payload   Json?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user    User?    @relation(fields: [userId], references: [id])
+  project Project? @relation(fields: [projectId], references: [id])
+
+  @@index([userId])
+  @@index([projectId])
+  @@index([createdAt])
+  @@map("guardrail_events")
+}
+
+model IngestionJob {
+  id           String    @id @default(uuid())
+  sourceId     String    @map("source_id")
+  bullJobId    String?   @db.VarChar(100) @map("bull_job_id")
+  jobType      String    @db.VarChar(30) @map("job_type")
+  // jobType: "ingest" | "embed" | "delete_vectors" | "reindex"
+  status       String    @default("queued") @db.VarChar(20)
+  // status: "queued" | "active" | "completed" | "failed" | "delayed"
+  attempts     Int       @default(0)
+  errorMessage String?   @map("error_message")
+  startedAt    DateTime? @map("started_at")
+  completedAt  DateTime? @map("completed_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+
+  source Source @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+
+  @@map("ingestion_jobs")
+}
