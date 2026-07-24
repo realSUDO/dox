@@ -95,6 +95,7 @@ model Source {
   // status: "pending_upload" | "queued" | "processing" | "embedding" | "indexed" | "reindex_queued" | "failed"
 
   chunkCount     Int?      @map("chunk_count")
+  metadata       Json?
   indexedAt      DateTime? @map("indexed_at")
   indexVersion   Int       @default(1) @map("index_version")
   lastError      String?   @map("last_error")
@@ -121,6 +122,7 @@ model Chunk {
   chunkIndex     Int      @map("chunk_index")
 
   content        String
+  contentTsv     Unsupported("tsvector")? @map("content_tsv")
   // contentTsv is a generated column managed via raw migration
   // Added manually in migration
 
@@ -130,6 +132,8 @@ model Chunk {
   timestampLabel String?  @db.VarChar(30) @map("timestamp_label")
 
   qdrantPointId  String   @map("qdrant_point_id")
+
+  subFileName    String?  @db.VarChar(500) @map("sub_file_name")
 
   status         String   @default("pending") @db.VarChar(20)
   // status: "pending" | "indexed" | "deleted"

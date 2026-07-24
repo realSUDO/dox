@@ -4,4 +4,6 @@ export * from "./project";
 export * from "./spaces";
 export * from "./queues";
 export * from "./source";
-// Export other services as they are added
+export * from "./connection";
+export * from "./embedding";
+export * from "./qdrant";

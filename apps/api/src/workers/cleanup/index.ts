@@ -1,58 +1,65 @@
-import { Worker, Job } from "bullmq";
+import { Worker, type Job } from "bullmq";
 import { db } from "@repo/database";
 import { logger } from "@repo/logger";
+import { valkeyConnection } from "@repo/services/connection";
+import { qdrantService } from "@repo/services/qdrant";
+import type { CleanupJobData } from "@repo/services/queues";
 
-const connection = {
-  url: process.env.VALKEY_URL || "redis://127.0.0.1:6379",
-};
 
-export const cleanupWorker = new Worker(
+export const cleanupWorker = new Worker<CleanupJobData>(
   "cleanup-queue",
-  async (job: Job) => {
-    const { sourceId, indexVersion } = job.data;
-    logger.info(`Cleanup job started for source ${sourceId}`);
+  async (job: Job<CleanupJobData>) => {
+    const { sourceId, projectId, indexVersion } = job.data;
+    logger.info(
+      `[cleanup-worker] Started: sourceId=${sourceId}` +
+      (indexVersion !== undefined ? ` stale v<${indexVersion}` : " full delete"),
+    );
 
     await db.ingestionJob.updateMany({
       where: { sourceId, jobType: "delete_vectors" },
-      data: { status: "active", startedAt: new Date() }
+      data: { status: "active", startedAt: new Date() },
     });
 
     try {
-      // For Milestone 5, Qdrant deletion is skipped because it belongs in Milestone 6
-      // In Milestone 6, we will call QdrantService here.
+      // ── 1. Delete Qdrant vectors ──────────────────────────────────────────
+      // Must happen before Postgres chunk deletion (chunk IDs are the Qdrant point IDs)
+      await qdrantService.deleteByFilter(projectId, {
+        sourceId,
+        ...(indexVersion !== undefined ? { indexVersionLt: indexVersion } : {}),
+      });
 
-      // Delete chunks from Postgres
+      // ── 2. Delete Postgres chunk rows ────────────────────────────────────
       if (indexVersion === undefined) {
-        // Full delete
-        await db.chunk.deleteMany({
-          where: { sourceId }
-        });
+        // Full source deletion — remove all chunks
+        await db.chunk.deleteMany({ where: { sourceId } });
       } else {
-        // Stale chunks delete
+        // Post-reindex stale chunk cleanup
         await db.chunk.deleteMany({
-          where: { 
-            sourceId,
-            indexVersion: { lt: indexVersion }
-          }
+          where: { sourceId, indexVersion: { lt: indexVersion } },
         });
       }
 
       await db.ingestionJob.updateMany({
         where: { sourceId, jobType: "delete_vectors" },
-        data: { status: "completed", completedAt: new Date() }
+        data: { status: "completed", completedAt: new Date() },
       });
 
+      logger.info(`[cleanup-worker] Done: sourceId=${sourceId}`);
       return { status: "success" };
-    } catch (error: any) {
+
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      logger.error(`[cleanup-worker] Failed: sourceId=${sourceId}`, { err: error });
       await db.ingestionJob.updateMany({
         where: { sourceId, jobType: "delete_vectors" },
-        data: { status: "failed", errorMessage: error.message, completedAt: new Date() }
+        data: { status: "failed", errorMessage: message, completedAt: new Date() },
       });
       throw error;
     }
   },
-  { connection }
+  { connection: valkeyConnection, concurrency: 5 },
 );
+
 
 cleanupWorker.on("failed", (job, err) => {
   logger.error(`Cleanup job ${job?.id} failed:`, err);

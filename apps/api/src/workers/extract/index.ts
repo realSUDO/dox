@@ -1,121 +1,254 @@
-import { Worker, Job } from "bullmq";
+import { Worker, type Job } from "bullmq";
+import { randomUUID } from "node:crypto";
+import fs from "node:fs/promises";
+import path from "node:path";
+
 import { db } from "@repo/database";
 import { logger } from "@repo/logger";
-import { queuesService } from "@repo/services/queues";
+import { valkeyConnection } from "@repo/services/connection";
+import { queuesService, type ExtractJobData } from "@repo/services/queues";
 import { spacesService } from "@repo/services/spaces";
-import { createTempDir, cleanupTempDir } from "@repo/services/ingestion/temp-files";
+import { env } from "@repo/services/env";
+import OpenAI from "openai";
+import {
+  createTempDir,
+  cleanupTempDir,
+} from "@repo/services/ingestion/temp-files";
 import { extractPdf } from "@repo/services/ingestion/extract/pdf";
 import { extractSrt } from "@repo/services/ingestion/extract/srt";
 import { extractVtt } from "@repo/services/ingestion/extract/vtt";
 import { extractHtml } from "@repo/services/ingestion/extract/html";
 import { extractText } from "@repo/services/ingestion/extract/text";
 import { extractZip } from "@repo/services/ingestion/extract/zip";
-import fs from "node:fs/promises";
-import path from "node:path";
+import type {
+  ExtractedItem,
+  ChunkJobData,
+  OcrJobData,
+} from "@repo/services/queues";
 
-const connection = {
-  url: process.env.VALKEY_URL || "redis://127.0.0.1:6379",
-};
-
-export const extractWorker = new Worker(
+export const extractWorker = new Worker<ExtractJobData>(
   "extract-queue",
-  async (job: Job) => {
+  async (job: Job<ExtractJobData>) => {
     const { sourceId, projectId, indexVersion } = job.data;
-    logger.info(`Extract job started for source ${sourceId}`);
+    logger.info(`[extract-worker] Started: sourceId=${sourceId} v=${indexVersion}`);
 
     const source = await db.source.findUnique({ where: { id: sourceId } });
-    if (!source) throw new Error("Source not found");
+    if (!source) throw new Error(`Source ${sourceId} not found in DB`);
 
+    // Mark active in both source and ingestion_jobs
     await db.source.update({
       where: { id: sourceId },
-      data: { status: "extracting" }
+      data: { status: "extracting" },
     });
-
     await db.ingestionJob.updateMany({
       where: { sourceId, jobType: "ingest" },
-      data: { status: "active", startedAt: new Date() }
+      data: { status: "active", startedAt: new Date() },
     });
 
-    const tempDir = await createTempDir(job.id!);
-    
+    const tempDir = await createTempDir(job.id ?? randomUUID());
+
     try {
-      let extractedData: any = [];
-      let format = source.mimeType;
+      const extractedData: ExtractedItem[] = [];
+      const mimeType = source.mimeType ?? "";
 
       if (source.type === "text") {
-        const text = await extractText(source.textContent || "");
-        extractedData = [{ type: "text", text }];
+        // ── Plain text source ────────────────────────────────────────
+        const text = extractText(source.textContent ?? "");
+        extractedData.push({ type: "text", text });
+
       } else if (source.type === "link") {
-        // Simple fetch for HTML
-        const res = await fetch(source.sourceUrl!);
-        const html = await res.text();
-        const text = extractHtml(html, source.sourceUrl!);
-        extractedData = [{ type: "text", text }];
+        // ── Webpage or YouTube link ──────────────────────────────────
+        // Timeout after 30s, max 10MB per spec
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 30_000);
+        try {
+          const res = await fetch(source.sourceUrl!, { signal: controller.signal });
+          if (!res.ok) throw new Error(`HTTP ${res.status} fetching ${source.sourceUrl}`);
+          const html = await res.text();
+          const text = extractHtml(html, source.sourceUrl ?? undefined);
+          extractedData.push({ type: "text", text });
+        } finally {
+          clearTimeout(timeout);
+        }
+
       } else if (source.type === "file" && source.storageKey) {
-        // Download from Spaces
-        const downloadPath = path.join(tempDir, source.fileName || "file");
+        // ── File download from DO Spaces ─────────────────────────────
+        const fileName = source.fileName ?? `file-${randomUUID()}`;
+        const downloadPath = path.join(tempDir, fileName);
         await spacesService.downloadFile(source.storageKey, downloadPath);
 
-        if (format === "application/pdf") {
+        if (mimeType === "application/pdf") {
           const pages = await extractPdf(downloadPath);
-          extractedData = [{ type: "pdf", pages }];
-        } else if (format === "application/x-subrip") {
+          extractedData.push({ type: "pdf", pages });
+
+        } else if (mimeType === "application/x-subrip" || fileName.endsWith(".srt")) {
           const content = await fs.readFile(downloadPath, "utf-8");
           const cues = extractSrt(content);
-          extractedData = [{ type: "srt", cues }];
-        } else if (format === "text/vtt") {
+          extractedData.push({ type: "srt", cues });
+
+        } else if (mimeType === "text/vtt" || fileName.endsWith(".vtt")) {
           const content = await fs.readFile(downloadPath, "utf-8");
           const cues = extractVtt(content);
-          extractedData = [{ type: "vtt", cues }];
-        } else if (format === "application/zip") {
-          const extractedFiles = await extractZip(downloadPath, tempDir);
-          // For MVP, just treating zip contents as plain text or pdf
-          // Here we would iterate through extractedFiles and run appropriate extractors
-          // We'll queue OCR for images or process text directly
-          extractedData = [{ type: "zip", files: extractedFiles }];
-        } else if (format?.startsWith("image/")) {
-          // Push to OCR queue
-          await queuesService.addOcrJob(`ocr-${sourceId}-v${indexVersion}`, {
+          extractedData.push({ type: "vtt", cues });
+
+        } else if (mimeType === "application/zip") {
+          // ── ZIP: extract files and route each to appropriate extractor ──
+          const zipEntries = await extractZip(downloadPath, tempDir);
+          const validFiles: string[] = [];
+
+          for (const entry of zipEntries) {
+            const ext = path.extname(entry.fileName).toLowerCase();
+            try {
+              if (ext === ".pdf") {
+                const pages = await extractPdf(entry.filePath);
+                extractedData.push({ type: "pdf", pages, fileName: entry.fileName });
+                validFiles.push(entry.fileName);
+
+              } else if (ext === ".srt") {
+                const content = await fs.readFile(entry.filePath, "utf-8");
+                const cues = extractSrt(content);
+                extractedData.push({ type: "srt", cues, fileName: entry.fileName });
+                validFiles.push(entry.fileName);
+
+              } else if (ext === ".vtt") {
+                const content = await fs.readFile(entry.filePath, "utf-8");
+                const cues = extractVtt(content);
+                extractedData.push({ type: "vtt", cues, fileName: entry.fileName });
+                validFiles.push(entry.fileName);
+
+              } else if ([".txt", ".md", ".csv"].includes(ext)) {
+                const content = await fs.readFile(entry.filePath, "utf-8");
+                const text = extractText(content);
+                extractedData.push({ type: "text", text, fileName: entry.fileName });
+                validFiles.push(entry.fileName);
+
+              } else if ([".jpg", ".jpeg", ".png", ".webp"].includes(ext)) {
+                validFiles.push(entry.fileName);
+                // Delegate image files to OCR worker — they can't be inlined here
+                const ocrData: OcrJobData = {
+                  sourceId,
+                  projectId,
+                  indexVersion,
+                  filePath: entry.filePath,
+                };
+                await queuesService.addOcrJob(
+                  `${sourceId}-img-${randomUUID()}`,
+                  ocrData,
+                );
+              } else {
+                logger.warn(
+                  `[extract-worker] Skipping unsupported ZIP entry: ${entry.fileName}`,
+                );
+              }
+            } catch (entryErr) {
+              logger.warn(
+                `[extract-worker] Failed to extract ZIP entry ${entry.fileName}:`,
+                { err: entryErr },
+              );
+              // Continue processing other ZIP entries
+            }
+          }
+
+          if (validFiles.length === 0) {
+            throw new Error("No valid extractable files found in ZIP archive.");
+          }
+
+          // Generate LLM summary of the ZIP structure
+          try {
+            const openaiClient = new OpenAI({
+              apiKey: env.OPENAI_API_KEY,
+              ...(env.OPENAI_API_BASE ? { baseURL: env.OPENAI_API_BASE } : {}),
+            });
+            const response = await openaiClient.chat.completions.create({
+              model: env.FAST_LLM_MODEL,
+              messages: [{
+                role: "system",
+                content: "You are an expert software architect. Analyze the provided directory tree of an uploaded repository/ZIP. Write a concise 1-sentence summary explaining what this codebase or project is likely about based on its folders and file names."
+              }, {
+                role: "user",
+                content: validFiles.join("\n")
+              }]
+            });
+            const summary = response.choices[0]?.message?.content || null;
+            
+            await db.source.update({
+              where: { id: sourceId },
+              data: {
+                metadata: {
+                  fileTree: validFiles,
+                  summary
+                }
+              }
+            });
+            logger.info(`[extract-worker] Generated ZIP summary for ${sourceId}`);
+          } catch (llmErr) {
+            logger.warn(`[extract-worker] Failed to generate ZIP summary`, { err: llmErr });
+          }
+
+        } else if (mimeType.startsWith("image/")) {
+          // ── Image: delegate to OCR worker ───────────────────────────
+          const ocrData: OcrJobData = {
             sourceId,
             projectId,
             indexVersion,
-            filePath: downloadPath // In a real distributed system, we'd upload back to spaces. For MVP single VM, temp file works.
-          });
+            filePath: downloadPath,
+          };
+          await queuesService.addOcrJob(sourceId, ocrData);
+          // OCR worker will enqueue chunk job — exit here
           return { status: "delegated_to_ocr" };
+
         } else {
-          // Fallback plain text
+          // ── Fallback: try plain text ─────────────────────────────────
           const content = await fs.readFile(downloadPath, "utf-8");
-          extractedData = [{ type: "text", text: content }];
+          extractedData.push({ type: "text", text: content });
         }
       }
 
+      if (extractedData.length === 0) {
+        throw new Error("No extractable content found in source");
+      }
+
       // Route to chunk queue
-      await queuesService.addChunkJob(`chunk-${sourceId}-v${indexVersion}`, {
+      const chunkData: ChunkJobData = {
         sourceId,
         projectId,
         indexVersion,
-        extractedData
-      });
+        extractedData,
+      };
+      await queuesService.addChunkJob(sourceId, chunkData);
 
-      return { status: "success" };
+      logger.info(
+        `[extract-worker] Done: sourceId=${sourceId}, items=${extractedData.length}`,
+      );
+      return { status: "success", items: extractedData.length };
 
-    } catch (error: any) {
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      logger.error(`[extract-worker] Failed: sourceId=${sourceId}`, { err: error });
+
       await db.source.update({
         where: { id: sourceId },
-        data: { status: "failed", lastError: error.message }
+        data: { status: "failed", lastError: message },
       });
       await db.ingestionJob.updateMany({
         where: { sourceId, jobType: "ingest" },
-        data: { status: "failed", errorMessage: error.message, completedAt: new Date() }
+        data: { status: "failed", errorMessage: message, completedAt: new Date() },
       });
-      throw error;
+      throw error; // re-throw so BullMQ marks the job failed and can retry
     } finally {
-      await cleanupTempDir(job.id!);
+      await cleanupTempDir(job.id ?? randomUUID());
     }
   },
-  { connection }
+  {
+    connection: valkeyConnection,
+    concurrency: 3,
+    limiter: {
+      max: 10,
+      duration: 60_000, // max 10 jobs/min — protects DO Spaces bandwidth
+    },
+  },
 );
 
 extractWorker.on("failed", (job, err) => {
-  logger.error(`Extract job ${job?.id} failed:`, err);
+  logger.error(`[extract-worker] Job ${job?.id} permanently failed`, { err });
 });

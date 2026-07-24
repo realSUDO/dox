@@ -97,7 +97,7 @@ export class SourceService {
       },
     });
 
-    await queuesService.addExtractJob(`extract-${sourceId}-v${updatedSource.indexVersion}`, {
+    await queuesService.addExtractJob(sourceId, {
       sourceId,
       projectId: source.projectId,
       jobType: "ingest",
@@ -128,7 +128,7 @@ export class SourceService {
       },
     });
 
-    await queuesService.addExtractJob(`extract-${source.id}-v${source.indexVersion}`, {
+    await queuesService.addExtractJob(source.id, {
       sourceId: source.id,
       projectId: source.projectId,
       jobType: "ingest",
@@ -160,7 +160,7 @@ export class SourceService {
       },
     });
 
-    await queuesService.addExtractJob(`extract-${source.id}-v${source.indexVersion}`, {
+    await queuesService.addExtractJob(source.id, {
       sourceId: source.id,
       projectId: source.projectId,
       jobType: "ingest",
@@ -222,11 +222,11 @@ export class SourceService {
       },
     });
 
-    await queuesService.addCleanupJob(`cleanup-${sourceId}-v${updatedSource.indexVersion}`, {
+    await queuesService.addCleanupJob(sourceId, {
       sourceId,
       projectId: source.projectId,
       jobType: "delete_vectors",
-      indexVersion: updatedSource.indexVersion,
+      // No indexVersion = full source deletion
     });
 
     return { sourceId, status: "deleted" };
@@ -263,7 +263,7 @@ export class SourceService {
       },
     });
 
-    await queuesService.addReindexJob(`reindex-${sourceId}-v${updatedSource.indexVersion}`, {
+    await queuesService.addReindexJob(sourceId, {
       sourceId,
       projectId: source.projectId,
       jobType: "reindex",
@@ -272,6 +272,89 @@ export class SourceService {
 
     return { sourceId, status: updatedSource.status };
   }
+
+  /**
+   * Approve a source that is paused in 'pending_approval' state.
+   * This transitions the source to 'embedding' and enqueues all its chunks for vector embedding.
+   */
+  async approveSource(userId: string, sourceId: string) {
+    const source = await db.source.findUnique({
+      where: { id: sourceId },
+      include: { project: { include: { members: true } } },
+    });
+
+    if (!source) throw new Error("Source not found");
+
+    // Only owners/editors can approve
+    const isOwner = source.project.ownerId === userId;
+    const isMemberEditor = source.project.members.some(
+      (m) => m.userId === userId && ["editor", "owner"].includes(m.role),
+    );
+    if (!isOwner && !isMemberEditor) {
+      throw new Error("Unauthorized to approve source ingestion");
+    }
+
+    if (source.status !== "pending_approval") {
+      throw new Error(`Cannot approve source in status: ${source.status}`);
+    }
+
+    // 1. Fetch pending chunk IDs
+    const chunkRecords = await db.chunk.findMany({
+      where: { sourceId, indexVersion: source.indexVersion, status: "pending" },
+      select: { id: true },
+      orderBy: { chunkIndex: "asc" },
+    });
+
+    if (chunkRecords.length === 0) {
+      // If no chunks, mark as indexed immediately
+      await db.source.update({
+        where: { id: sourceId },
+        data: { status: "indexed", indexedAt: new Date(), chunkCount: 0 },
+      });
+      await db.ingestionJob.create({
+        data: {
+          sourceId,
+          jobType: "embed",
+          status: "completed",
+          startedAt: new Date(),
+          completedAt: new Date(),
+        },
+      });
+      return { sourceId, status: "indexed" };
+    }
+
+    // 2. Create ingestion job for embedding
+    await db.ingestionJob.create({
+      data: {
+        sourceId,
+        jobType: "embed",
+        status: "active",
+        startedAt: new Date(),
+      },
+    });
+
+    // 3. Dispatch embed jobs in batches of 100
+    const EMBED_BATCH_SIZE = 100;
+    for (let i = 0; i < chunkRecords.length; i += EMBED_BATCH_SIZE) {
+      const batch = chunkRecords.slice(i, i + EMBED_BATCH_SIZE);
+      const batchIndex = Math.floor(i / EMBED_BATCH_SIZE);
+      await queuesService.addEmbedJob(sourceId, batchIndex, {
+        sourceId,
+        projectId: source.projectId,
+        indexVersion: source.indexVersion,
+        chunkIds: batch.map((c) => c.id),
+      });
+    }
+
+    // 4. Update status ONLY after successfully queueing
+    await db.source.update({
+      where: { id: sourceId },
+      data: { status: "embedding" },
+    });
+
+    return { sourceId, status: "embedding", batches: Math.ceil(chunkRecords.length / EMBED_BATCH_SIZE) };
+  }
 }
+
 
 export const sourceService = new SourceService();

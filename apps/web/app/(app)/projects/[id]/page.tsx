@@ -6,7 +6,15 @@ import Link from "next/link";
 import { toast } from "sonner";
 import { Button } from "~/components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "~/components/ui/card";
-import { Trash2, RefreshCw, Plus, Link as LinkIcon, FileText } from "lucide-react";
+import { Trash2, RefreshCw, Plus, Link as LinkIcon, FileText, CheckCircle } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "~/components/ui/dialog";
 
 export default function ProjectDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id: projectId } = use(params);
@@ -37,6 +45,16 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
     },
     onError: (err) => {
       toast.error(err.message || "Failed to start reindexing");
+    }
+  });
+
+  const approveMutation = trpc.sources.approveSource.useMutation({
+    onSuccess: () => {
+      toast.success("Source approved for embedding!");
+      utils.sources.listSources.invalidate();
+    },
+    onError: (err) => {
+      toast.error(err.message || "Failed to approve source");
     }
   });
 
@@ -98,6 +116,54 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                         >
                           <RefreshCw className="h-4 w-4 mr-2" /> Reindex
                         </Button>
+                      )}
+                      {source.status === "pending_approval" && (
+                        <Dialog>
+                          <DialogTrigger asChild>
+                            <Button variant="default" size="sm" className="bg-green-600 hover:bg-green-700 text-white">
+                              <CheckCircle className="h-4 w-4 mr-2" /> Review & Approve
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+                            <DialogHeader>
+                              <DialogTitle>Review Ingestion Preview</DialogTitle>
+                              <DialogDescription>
+                                Please review the context extracted from your document/ZIP before we generate the vector embeddings.
+                              </DialogDescription>
+                            </DialogHeader>
+                            <div className="mt-4 space-y-4">
+                              {source.metadata?.summary && (
+                                <div>
+                                  <h4 className="font-semibold text-sm mb-1 text-primary">Generated Summary</h4>
+                                  <div className="p-3 bg-muted/50 rounded-md text-sm text-muted-foreground whitespace-pre-wrap">
+                                    {source.metadata.summary}
+                                  </div>
+                                </div>
+                              )}
+                              {source.metadata?.fileTree && Array.isArray(source.metadata.fileTree) && (
+                                <div>
+                                  <h4 className="font-semibold text-sm mb-1 text-primary">Included Files ({source.metadata.fileTree.length})</h4>
+                                  <div className="p-3 bg-muted/30 border rounded-md text-xs font-mono h-48 overflow-y-auto">
+                                    {source.metadata.fileTree.map((f: string, i: number) => (
+                                      <div key={i} className="truncate">{f}</div>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                              {!source.metadata && (
+                                <p className="text-sm text-muted-foreground italic">No preview metadata available for this source.</p>
+                              )}
+                            </div>
+                            <div className="flex justify-end mt-6">
+                              <Button
+                                onClick={() => approveMutation.mutate({ sourceId: source.id })}
+                                disabled={approveMutation.isPending}
+                              >
+                                {approveMutation.isPending ? "Approving..." : "Approve & Generate Embeddings"}
+                              </Button>
+                            </div>
+                          </DialogContent>
+                        </Dialog>
                       )}
                       <Button 
                         variant="destructive" 

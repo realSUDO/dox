@@ -1,15 +1,12 @@
-import { Worker, Job } from "bullmq";
+import { Worker, type Job } from "bullmq";
 import { db } from "@repo/database";
 import { logger } from "@repo/logger";
-import { queuesService } from "@repo/services/queues";
+import { valkeyConnection } from "@repo/services/connection";
+import { queuesService, type ReindexJobData } from "@repo/services/queues";
 
-const connection = {
-  url: process.env.VALKEY_URL || "redis://127.0.0.1:6379",
-};
-
-export const reindexWorker = new Worker(
+export const reindexWorker = new Worker<ReindexJobData>(
   "reindex-queue",
-  async (job: Job) => {
+  async (job: Job<ReindexJobData>) => {
     const { sourceId, indexVersion } = job.data;
     logger.info(`Reindex job started for source ${sourceId} to v${indexVersion}`);
 
@@ -19,13 +16,14 @@ export const reindexWorker = new Worker(
     });
 
     try {
-      // Queue extract job for the new version
-      await queuesService.addExtractJob(`extract-${sourceId}-v${indexVersion}`, job.data);
-      
-      // Queue cleanup for the OLD version (less than indexVersion)
-      await queuesService.addCleanupJob(`cleanup-${sourceId}-v${indexVersion}`, {
+      await queuesService.addExtractJob(sourceId, job.data);
+
+      // Queue cleanup for OLD version chunks (stale after reindex)
+      await queuesService.addCleanupJob(sourceId, {
         sourceId,
-        indexVersion
+        projectId: job.data.projectId,
+        jobType: "delete_vectors",
+        indexVersion, // cleanup will delete indexVersion < this value
       });
 
       await db.ingestionJob.updateMany({
@@ -42,7 +40,7 @@ export const reindexWorker = new Worker(
       throw error;
     }
   },
-  { connection }
+  { connection: valkeyConnection, concurrency: 2 },
 );
 
 reindexWorker.on("failed", (job, err) => {

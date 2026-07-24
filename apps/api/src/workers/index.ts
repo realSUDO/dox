@@ -1,18 +1,33 @@
+import { logger } from "@repo/logger";
 import { extractWorker } from "./extract";
 import { ocrWorker } from "./ocr";
 import { chunkWorker } from "./chunk";
 import { cleanupWorker } from "./cleanup";
 import { reindexWorker } from "./reindex";
-import { logger } from "@repo/logger";
+import { embedWorker } from "./embed";
 
 export function startWorkers() {
-  logger.info("Starting background workers...");
-  // Workers are automatically started when instantiated,
-  // but this function ensures they are imported and initialized.
-  
-  [extractWorker, ocrWorker, chunkWorker, cleanupWorker, reindexWorker].forEach(worker => {
+  logger.info("[workers] Starting background workers...");
+
+  const workers = [
+    extractWorker,
+    ocrWorker,
+    chunkWorker,
+    cleanupWorker,
+    reindexWorker,
+    embedWorker,
+  ];
+
+  workers.forEach((worker) => {
     worker.on("ready", () => {
-      logger.info(`Worker ready: ${worker.name}`);
+      logger.info(`[workers] Ready: ${worker.name}`);
+    });
+    worker.on("error", (err) => {
+      // Errors from individual jobs are handled inside each worker.
+      // This catches connection-level errors.
+      logger.error(`[workers] Connection error on ${worker.name}`, { err });
     });
   });
+
+  logger.info(`[workers] ${workers.length} workers initialized`);
 }

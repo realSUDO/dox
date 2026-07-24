@@ -9,8 +9,8 @@ export interface SlidingWindowChunk {
 
 export function chunkSlidingWindow(
   cues: SubtitleCue[],
-  maxDurationSeconds = 30,
-  overlapCues = 1
+  maxDurationSeconds = 180,
+  overlapCues = 2
 ): SlidingWindowChunk[] {
   const chunks: SlidingWindowChunk[] = [];
   

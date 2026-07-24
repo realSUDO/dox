@@ -26,6 +26,7 @@ const sourceSchema = z.object({
   createdAt: z.date(),
   updatedAt: z.date(),
   deletedAt: z.date().nullable(),
+  metadata: z.any().nullable().optional(),
 });
 
 const serializeSource = (s: any) => ({
@@ -104,5 +105,13 @@ export const sourcesRouter = router({
     .output(z.object({ sourceId: z.string().uuid(), status: z.string() }))
     .mutation(async ({ input, ctx }) => {
       return sourceService.reindexSource(ctx.user.id, input.sourceId);
+    }),
+
+  approveSource: protectedProcedure
+    .meta({ openapi: { method: "POST", path: "/sources/{sourceId}/approve" } })
+    .input(z.object({ sourceId: z.string().uuid() }))
+    .output(z.object({ sourceId: z.string().uuid(), status: z.string(), batches: z.number().optional() }))
+    .mutation(async ({ input, ctx }) => {
+      return sourceService.approveSource(ctx.user.id, input.sourceId);
     }),
 });
