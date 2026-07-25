@@ -24,6 +24,7 @@ RUN pnpm install --no-frozen-lockfile
 # --- Stage 3: Build ---
 COPY --from=builder /app/out/full/ .
 COPY turbo.json turbo.json
+RUN pnpm --filter @repo/database exec prisma generate
 RUN pnpm turbo run build --filter=@repo/api...
 
 # --- Stage 4: Runner ---
