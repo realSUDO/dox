@@ -36,17 +36,26 @@ services:
     restart: always
     environment:
       - PORT=8000
-      - NODE_ENV=production
+      - NODE_ENV=prod
       - DATABASE_URL=${DATABASE_URL}
       - VALKEY_URL=${VALKEY_URL}
       - QDRANT_URL=${QDRANT_URL}
       - QDRANT_API_KEY=${QDRANT_API_KEY}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENAI_API_BASE=${OPENAI_API_BASE}
       - SPACES_ENDPOINT=${SPACES_ENDPOINT}
       - SPACES_REGION=${SPACES_REGION}
       - SPACES_BUCKET=${SPACES_BUCKET}
       - SPACES_KEY=${SPACES_KEY}
       - SPACES_SECRET=${SPACES_SECRET}
+      - SESSION_SECRET=${SESSION_SECRET}
+      - JWT_SECRET=${JWT_SECRET}
+      - LOGGER_LEVEL=${LOGGER_LEVEL}
+      - EMBED_BATCH_SIZE=${EMBED_BATCH_SIZE}
+      - GENERATION_MODEL=${GENERATION_MODEL}
+      - QUERY_MODEL=${QUERY_MODEL}
+      - EMBED_MODEL=${EMBED_MODEL}
+      - RERANKER=${RERANKER}
     depends_on:
       - postgres
       - valkey
