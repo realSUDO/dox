@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { adminProcedure, router } from "../../trpc";
+import { adminService } from "../../services";
 
 export const adminRouter = router({
   listGuardrailEvents: adminProcedure
@@ -39,4 +40,40 @@ export const adminRouter = router({
         totalPages: Math.ceil(total / input.limit),
       };
     }),
+
+  getSystemHealth: adminProcedure.query(async () => {
+    return await adminService.getSystemHealth();
+  }),
+
+  listActiveJobs: adminProcedure.query(async () => {
+    return await adminService.listActiveJobs();
+  }),
+
+  listFailedJobs: adminProcedure.query(async () => {
+    return await adminService.listFailedJobs();
+  }),
+
+  getJobsBySource: adminProcedure
+    .input(z.object({ sourceId: z.string() }))
+    .query(async ({ input }) => {
+      return await adminService.getJobsBySource(input.sourceId);
+    }),
+
+  retryJob: adminProcedure
+    .input(z.object({ queueName: z.string(), jobId: z.string() }))
+    .mutation(async ({ input }) => {
+      return await adminService.retryJob(input.queueName, input.jobId);
+    }),
+
+  getMetricsSummary: adminProcedure.query(async () => {
+    return await adminService.getMetricsSummary();
+  }),
+
+  getIngestionStats: adminProcedure.query(async () => {
+    return await adminService.getIngestionStats();
+  }),
+
+  getRAGStats: adminProcedure.query(async () => {
+    return await adminService.getRAGStats();
+  }),
 });

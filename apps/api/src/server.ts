@@ -3,6 +3,16 @@ import { logger } from "@repo/logger";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import rateLimit from "express-rate-limit";
+import { createBullBoard } from "@bull-board/api";
+import { BullMQAdapter } from "@bull-board/api/bullMQAdapter";
+import { ExpressAdapter } from "@bull-board/express";
+import { extractQueue, embedQueue, ocrQueue } from "@repo/services/queues";
+
+import { requestIdMiddleware } from "./middleware/request-id";
+import { requestLoggerMiddleware } from "./middleware/request-logger";
+import { requireAdminMiddleware } from "./middleware/require-admin";
+import { basicAuthMiddleware } from "./middleware/basic-auth";
+import { registry } from "./metrics";
 
 import * as trpcExpress from "@trpc/server/adapters/express";
 import { generateOpenApiDocument, createOpenApiExpressMiddleware } from "trpc-to-openapi";
@@ -31,6 +41,20 @@ if (env.NODE_ENV !== "prod") {
 
 app.use(express.json());
 app.use(cookieParser());
+app.use(requestIdMiddleware);
+app.use(requestLoggerMiddleware);
+
+// Set up Bull Board
+const serverAdapter = new ExpressAdapter();
+serverAdapter.setBasePath("/admin/queues");
+createBullBoard({
+  queues: [
+    new BullMQAdapter(extractQueue),
+    new BullMQAdapter(embedQueue),
+    new BullMQAdapter(ocrQueue),
+  ],
+  serverAdapter,
+});
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -57,6 +81,13 @@ app.get("/", (req, res) => {
 app.get("/health", (req, res) => {
   return res.json({ status: "healthy" });
 });
+
+app.get("/metrics", basicAuthMiddleware, async (req, res) => {
+  res.set("Content-Type", registry.contentType);
+  res.end(await registry.metrics());
+});
+
+app.use("/admin/queues", requireAdminMiddleware, serverAdapter.getRouter());
 
 logger.debug(`openapi.json: ${env.BASE_URL}/openapi.json`);
 app.get("/openapi.json", (req, res) => {

@@ -24,6 +24,12 @@ importers:
 
   apps/api:
     dependencies:
+      '@bull-board/api':
+        specifier: ^8.3.0
+        version: 8.3.0(@bull-board/ui@8.3.0(bullmq@5.81.0))(bullmq@5.81.0)
+      '@bull-board/express':
+        specifier: ^8.3.0
+        version: 8.3.0(bullmq@5.81.0)
       '@repo/logger':
         specifier: workspace:*
         version: link:../../packages/logger
@@ -36,6 +42,9 @@ importers:
       '@trpc/server':
         specifier: ^11.8.1
         version: 11.8.1(typescript@5.9.3)
+      basic-auth:
+        specifier: ^2.0.1
+        version: 2.0.1
       cookie-parser:
         specifier: ^1.4.7
         version: 1.4.7
@@ -48,6 +57,9 @@ importers:
       express-rate-limit:
         specifier: ^8.6.0
         version: 8.6.0(express@5.2.1)
+      prom-client:
+        specifier: ^15.1.3
+        version: 15.1.3
       trpc-to-openapi:
         specifier: ^3.1.0
         version: 3.1.0(@trpc/server@11.8.1(typescript@5.9.3))(zod-openapi@5.4.5(zod@4.3.5))(zod@4.3.5)
@@ -210,7 +222,7 @@ importers:
         version: 0.562.0(react@19.2.0)
       next:
         specifier: 16.1.0
-        version: 16.1.0(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
+        version: 16.1.0(@opentelemetry/api@1.9.1)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
       next-themes:
         specifier: ^0.4.6
         version: 0.4.6(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
@@ -602,6 +614,24 @@ packages:
   '@bramus/specificity@2.4.2':
     resolution: {integrity: sha512-ctxtJ/eA+t+6q2++vj5j7FYX3nRu311q1wfYH3xjlLOsczhlhxAg2FWNUXhpGvAw3BWo1xBcvOV6/YLc2r5FJw==}
     hasBin: true
+
+  '@bull-board/api@8.3.0':
+    resolution: {integrity: sha512-5ti+DROXnlZeQYnOiapUc2t4JFWO2rCPMxzZZbG15e8Nn2sX4gU0x09WqLfDU19RjYWDnNa1FtJm1DdQEC6Z0Q==}
+    peerDependencies:
+      '@bull-board/ui': 8.3.0
+      bull: ^4.16.5
+      bullmq: ^5.79.2
+    peerDependenciesMeta:
+      bull:
+        optional: true
+      bullmq:
+        optional: true
+
+  '@bull-board/express@8.3.0':
+    resolution: {integrity: sha512-WtS2c58zkIqHHDFuw6UqOHQ/Efu3/KEFeOk5s7WtyluRylYR+OckpPeQPZ3ANsW9r82PSw/+b6QyGi+MWkFagQ==}
+
+  '@bull-board/ui@8.3.0':
+    resolution: {integrity: sha512-ZKHvHEzLekyDqSQEECOJZ0gP2wcba0Jdm+0dl7SXu82qfp03HIxrvmsKZJzG9bLVSI3GitLgcIaYHWsjDjHFZQ==}
 
   '@colors/colors@1.6.0':
     resolution: {integrity: sha512-Ir+AOibqzrIsL6ajt3Rz3LskB7OiMVHqltZmspbW/TJuTVuyOMirVqAkjfY6JISiLHgyNqicAC8AyHHGzNd/dA==}
@@ -1223,6 +1253,10 @@ packages:
   '@nodelib/fs.walk@1.2.8':
     resolution: {integrity: sha512-oGB+UxlgWcgQkgwo8GcEGwemoTFt3FIO9ababBmaGwXIoBKZ+GTy0pP185beGg7Llih/NSHSV2XAs1lnznocSg==}
     engines: {node: '>= 8'}
+
+  '@opentelemetry/api@1.9.1':
+    resolution: {integrity: sha512-gLyJlPHPZYdAk1JENA9LeHejZe1Ti77/pTeFm/nMXmQH/HFZlcS/O2XJB+L8fkbrNSqhdtlvjBVjxwUYanNH5Q==}
+    engines: {node: '>=8.0.0'}
 
   '@prisma/client@6.19.3':
     resolution: {integrity: sha512-mKq3jQFhjvko5LTJFHGilsuQs+W+T3Gm451NzuTDGQxwCzwXHYnIu2zGkRoW+Exq3Rob7yp2MfzSrdIiZVhrBg==}
@@ -2618,12 +2652,19 @@ packages:
   baseline-browser-mapping@2.9.11:
     resolution: {integrity: sha512-Sg0xJUNDU1sJNGdfGWhVHX0kkZ+HWcvmVymJbj6NSgZZmW/8S9Y2HQ5euytnIgakgxN6papOAWiwDo1ctFDcoQ==}
 
+  basic-auth@2.0.1:
+    resolution: {integrity: sha512-NF+epuEdnUYVlGuhaxbbq+dvJttwLnGY+YixlXlME5KpQ5W3CnXA5cVTneY3SPbPDRkcjMbifrwmFYcClgOZeg==}
+    engines: {node: '>= 0.8'}
+
   bcrypt@6.0.0:
     resolution: {integrity: sha512-cU8v/EGSrnH+HnxV2z0J7/blxH8gq7Xh2JFT6Aroax7UohdmiJJlxApMxtKfuI7z68NvvVcmR78k2LbT6efhRg==}
     engines: {node: '>= 18'}
 
   bidi-js@1.0.3:
     resolution: {integrity: sha512-RKshQI1R3YQ+n9YJz2QQ147P66ELpa1FQEg20Dk8oW9t2KgLbpDLLp9aGZ7y8WHSshDknG0bknqGw5/tyCs5tw==}
+
+  bintrees@1.0.2:
+    resolution: {integrity: sha512-VOMgTMwjAaUG580SXn3LacVgjurrbMme7ZZNYGSSV7mmtY6QQRh0Eg3pwIcntQ77DErK1L0NxkbetjcoXzVwKw==}
 
   bl@4.1.0:
     resolution: {integrity: sha512-1W07cM9gS6DcLperZfFSj+bWLtaPGSOHWhPiGzXmvVJbRLdG82sH/Kn8EtW1VqWVA54AKf2h5k5BbnIbwF3h6w==}
@@ -3040,6 +3081,11 @@ packages:
 
   effect@3.21.0:
     resolution: {integrity: sha512-PPN80qRokCd1f015IANNhrwOnLO7GrrMQfk4/lnZRE/8j7UPWrNNjPV0uBrZutI/nHzernbW+J0hdqQysHiSnQ==}
+
+  ejs@6.0.1:
+    resolution: {integrity: sha512-UaaM14yby8U3k02ihS1Bmj5Kz2d7CCQM1scxpgs4Mhkq8F1wR2gl3+Ts4h5Ne4Mnt7M9m4Dw7jsuMr3+xO4vZA==}
+    engines: {node: '>=0.12.18'}
+    hasBin: true
 
   embla-carousel-react@8.6.0:
     resolution: {integrity: sha512-0/PjqU7geVmo6F734pmPqpyHqiM99olvyecY7zdweCw+6tKEXnrE90pBiBbMMU8s5tICemzpQ3hi5EpxzGW+JA==}
@@ -4239,6 +4285,10 @@ packages:
       typescript:
         optional: true
 
+  prom-client@15.1.3:
+    resolution: {integrity: sha512-6ZiOBfCywsD4k1BN9IX0uZhF+tJkV8q8llP64G5Hajs4JOeVLPCwpPVcpXy3BwYiUGgyJzsJJQeOIv7+hDSq8g==}
+    engines: {node: ^16 || ^18 || >=20}
+
   prop-types@15.8.1:
     resolution: {integrity: sha512-oj87CgZICdulUohogVAR7AjlC0327U4el4L6eAvOqCeudMDVU0NThNaV+b9Df4dXgSP1gXMTnPdhfe/2qDH5cg==}
 
@@ -4386,6 +4436,9 @@ packages:
     resolution: {integrity: sha512-1qny3OExCf0UvUV/5wpYKf2YwPcOqXzkwKKSmKHiE6ZMQs5heeE/c8eXK+PNllPvmjgAbfnsbpkGZWy8cBpn9w==}
     engines: {node: '>=4'}
 
+  redis-info@3.1.0:
+    resolution: {integrity: sha512-ER4L9Sh/vm63DkIE0bkSjxluQlioBiBgf5w1UuldaW/3vPcecdljVDisZhmnCMvsxHNiARTTDDHGg9cGwTfrKg==}
+
   redis-parser@3.0.0:
     resolution: {integrity: sha512-DJnGAeenTdpMEH6uAJRK/uiyEIH9WVsUmoLwzudwGJUwZPp80PDBWPHXSAGNPwNvIXAbe7MSUB1zQFugFml66A==}
     engines: {node: '>=4'}
@@ -4438,6 +4491,9 @@ packages:
   safe-array-concat@1.1.3:
     resolution: {integrity: sha512-AURm5f0jYEOydBj7VQlVvDrjeFgthDdEF5H1dP+6mNpoXOMo1quQqJ4wvJDyRZ9+pO3kGWoOdmV08cSv2aJV6Q==}
     engines: {node: '>=0.4'}
+
+  safe-buffer@5.1.2:
+    resolution: {integrity: sha512-Gd2UZBJDkXlY7GbJxfsE8/nvKkUEU1G38c1siN6QP6a9PT9MmHB8GnpscSmMJSoF8LOIrt8ud/wPtojys4G6+g==}
 
   safe-buffer@5.2.1:
     resolution: {integrity: sha512-rp3So07KcdmmKbGvgaNxQSJr7bGVSVk5S9Eq1F+ppbRo70+YeaDxkw5Dd8NPN+GD6bjnYm2VuPuCXmpuYvmCXQ==}
@@ -4656,6 +4712,9 @@ packages:
 
   tar-stream@3.2.0:
     resolution: {integrity: sha512-ojzvCvVaNp6aOTFmG7jaRD0meowIAuPc3cMMhSgKiVWws1GyHbGd/xvnyuRKcKlMpt3qvxx6r0hreCNITP9hIg==}
+
+  tdigest@0.1.2:
+    resolution: {integrity: sha512-+G0LLgjjo9BZX2MfdvPfH+MKLCrxlXSYec5DaPYP1fe6Iyhf0/fSmJ0bFiZ1F8BT6cGXl2LpltQptzjXKWEkKA==}
 
   teex@1.0.1:
     resolution: {integrity: sha512-eYE6iEI62Ni1H8oIa7KlDU6uQBtqr4Eajni3wX7rpfXD8ysFx8z0+dri+KWEPWpBsxXfxu58x/0jvTVT1ekOSg==}
@@ -5235,6 +5294,31 @@ snapshots:
     dependencies:
       css-tree: 3.2.1
 
+  '@bull-board/api@8.3.0(@bull-board/ui@8.3.0(bullmq@5.81.0))(bullmq@5.81.0)':
+    dependencies:
+      '@bull-board/ui': 8.3.0(bullmq@5.81.0)
+      redis-info: 3.1.0
+    optionalDependencies:
+      bullmq: 5.81.0
+
+  '@bull-board/express@8.3.0(bullmq@5.81.0)':
+    dependencies:
+      '@bull-board/api': 8.3.0(@bull-board/ui@8.3.0(bullmq@5.81.0))(bullmq@5.81.0)
+      '@bull-board/ui': 8.3.0(bullmq@5.81.0)
+      ejs: 6.0.1
+      express: 5.2.1
+    transitivePeerDependencies:
+      - bull
+      - bullmq
+      - supports-color
+
+  '@bull-board/ui@8.3.0(bullmq@5.81.0)':
+    dependencies:
+      '@bull-board/api': 8.3.0(@bull-board/ui@8.3.0(bullmq@5.81.0))(bullmq@5.81.0)
+    transitivePeerDependencies:
+      - bull
+      - bullmq
+
   '@colors/colors@1.6.0': {}
 
   '@csstools/color-helpers@6.1.0': {}
@@ -5664,6 +5748,8 @@ snapshots:
     dependencies:
       '@nodelib/fs.scandir': 2.1.5
       fastq: 1.19.1
+
+  '@opentelemetry/api@1.9.1': {}
 
   '@prisma/client@6.19.3(prisma@6.19.3(typescript@5.9.3))(typescript@5.9.3)':
     optionalDependencies:
@@ -7057,6 +7143,10 @@ snapshots:
 
   baseline-browser-mapping@2.9.11: {}
 
+  basic-auth@2.0.1:
+    dependencies:
+      safe-buffer: 5.1.2
+
   bcrypt@6.0.0:
     dependencies:
       node-addon-api: 8.9.0
@@ -7065,6 +7155,8 @@ snapshots:
   bidi-js@1.0.3:
     dependencies:
       require-from-string: 2.0.2
+
+  bintrees@1.0.2: {}
 
   bl@4.1.0:
     dependencies:
@@ -7503,6 +7595,8 @@ snapshots:
     dependencies:
       '@standard-schema/spec': 1.1.0
       fast-check: 3.23.2
+
+  ejs@6.0.1: {}
 
   embla-carousel-react@8.6.0(react@19.2.0):
     dependencies:
@@ -8502,7 +8596,7 @@ snapshots:
       react: 19.2.0
       react-dom: 19.2.0(react@19.2.0)
 
-  next@16.1.0(react-dom@19.2.0(react@19.2.0))(react@19.2.0):
+  next@16.1.0(@opentelemetry/api@1.9.1)(react-dom@19.2.0(react@19.2.0))(react@19.2.0):
     dependencies:
       '@next/env': 16.1.0
       '@swc/helpers': 0.5.15
@@ -8521,6 +8615,7 @@ snapshots:
       '@next/swc-linux-x64-musl': 16.1.0
       '@next/swc-win32-arm64-msvc': 16.1.0
       '@next/swc-win32-x64-msvc': 16.1.0
+      '@opentelemetry/api': 1.9.1
       sharp: 0.34.5
     transitivePeerDependencies:
       - '@babel/core'
@@ -8825,6 +8920,11 @@ snapshots:
     transitivePeerDependencies:
       - magicast
 
+  prom-client@15.1.3:
+    dependencies:
+      '@opentelemetry/api': 1.9.1
+      tdigest: 0.1.2
+
   prop-types@15.8.1:
     dependencies:
       loose-envify: 1.4.0
@@ -8995,6 +9095,10 @@ snapshots:
 
   redis-errors@1.2.0: {}
 
+  redis-info@3.1.0:
+    dependencies:
+      lodash: 4.17.21
+
   redis-parser@3.0.0:
     dependencies:
       redis-errors: 1.2.0
@@ -9086,6 +9190,8 @@ snapshots:
       get-intrinsic: 1.3.0
       has-symbols: 1.1.0
       isarray: 2.0.5
+
+  safe-buffer@5.1.2: {}
 
   safe-buffer@5.2.1: {}
 
@@ -9407,6 +9513,10 @@ snapshots:
       - bare-abort-controller
       - bare-buffer
       - react-native-b4a
+
+  tdigest@0.1.2:
+    dependencies:
+      bintrees: 1.0.2
 
   teex@1.0.1:
     dependencies:

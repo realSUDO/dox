@@ -9,3 +9,4 @@ export * from "./embedding";
 export * from "./qdrant";
 export * from "./rag";
 export * from "./guardrails";
+export * from "./admin";
