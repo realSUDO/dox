@@ -8,7 +8,9 @@ interface CreateTRPCHttpBatchClientClientOpts {
 export const createTRPCHttpBatchClientClient = (opts?: CreateTRPCHttpBatchClientClientOpts) => {
   const c = opts?.enableStreaming ? httpBatchStreamLink : httpLink;
   return c({
-    url: env.NEXT_PUBLIC_API_URL ? `${env.NEXT_PUBLIC_API_URL}/trpc` : "/trpc",
+    url: typeof window !== "undefined" 
+      ? (env.NEXT_PUBLIC_API_URL ? `${env.NEXT_PUBLIC_API_URL}/trpc` : "/trpc")
+      : (process.env.INTERNAL_API_URL ? `${process.env.INTERNAL_API_URL}/trpc` : (env.NEXT_PUBLIC_API_URL ? `${env.NEXT_PUBLIC_API_URL}/trpc` : "/trpc")),
     async headers() {
       if (typeof window !== "undefined") return {};
       const { cookies } = await import("next/headers");
