@@ -1,0 +1,12 @@
+{$DOMAIN} {
+	# Proxy all backend routes to the API container
+	reverse_proxy /api/* api:8000
+	reverse_proxy /trpc/* api:8000
+	reverse_proxy /admin/queues* api:8000
+	reverse_proxy /docs* api:8000
+	reverse_proxy /openapi.json api:8000
+	reverse_proxy /metrics api:8000
+
+	# Proxy everything else to the Next.js frontend
+	reverse_proxy web:3000
+}

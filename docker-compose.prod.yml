@@ -1,0 +1,99 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    networks:
+      - dox_net
+
+  valkey:
+    image: valkey/valkey:7-alpine
+    restart: unless-stopped
+    command: valkey-server --requirepass ${VALKEY_PASSWORD} --appendonly yes
+    volumes:
+      - valkey_data:/data
+    networks:
+      - dox_net
+
+  qdrant:
+    image: qdrant/qdrant:v1.9.0
+    restart: unless-stopped
+    environment:
+      QDRANT__SERVICE__API_KEY: ${QDRANT_API_KEY}
+    volumes:
+      - qdrant_data:/qdrant/storage
+    networks:
+      - dox_net
+
+  api:
+    image: ghcr.io/${IMAGE_NAME}-api:latest
+    container_name: api
+    restart: always
+    environment:
+      - PORT=8000
+      - NODE_ENV=production
+      - DATABASE_URL=${DATABASE_URL}
+      - VALKEY_URL=${VALKEY_URL}
+      - QDRANT_URL=${QDRANT_URL}
+      - QDRANT_API_KEY=${QDRANT_API_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - SPACES_ENDPOINT=${SPACES_ENDPOINT}
+      - SPACES_REGION=${SPACES_REGION}
+      - SPACES_BUCKET=${SPACES_BUCKET}
+      - SPACES_KEY=${SPACES_KEY}
+      - SPACES_SECRET=${SPACES_SECRET}
+    depends_on:
+      - postgres
+      - valkey
+      - qdrant
+    networks:
+      - dox_net
+
+  web:
+    image: ghcr.io/${IMAGE_NAME}-web:latest
+    container_name: web
+    restart: always
+    environment:
+      - PORT=3000
+      - NODE_ENV=production
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+    depends_on:
+      - api
+    networks:
+      - dox_net
+
+  caddy:
+    image: caddy:2-alpine
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      - DOMAIN=${DOMAIN}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - dox_net
+    depends_on:
+      - web
+      - api
+
+volumes:
+  pg_data:
+  valkey_data:
+  qdrant_data:
+  caddy_data:
+  caddy_config:
+
+networks:
+  dox_net:
+    driver: bridge
