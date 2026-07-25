@@ -16,6 +16,7 @@ export interface QdrantPointPayload {
   timestampLabel: string | null;
   sourceType: string;         // "file" | "link" | "text"
   fileName: string | null;
+  subFileName: string | null;
   sourceUrl: string | null;
 }
 
@@ -148,6 +149,30 @@ export class QdrantService {
     });
 
     return result.result.count;
+  }
+
+  /**
+   * Search for similar vectors in a collection, with optional filters.
+   */
+  async search(
+    projectId: string,
+    params: {
+      vector: number[];
+      filter?: any;
+      limit?: number;
+      with_payload?: boolean;
+    }
+  ): Promise<QdrantPoint[]> {
+    const name = collectionName(projectId);
+    
+    const result = await this.request("POST", `/collections/${name}/points/search`, {
+      vector: params.vector,
+      filter: params.filter,
+      limit: params.limit || 20,
+      with_payload: params.with_payload ?? true,
+    });
+
+    return result.result;
   }
 
   /**

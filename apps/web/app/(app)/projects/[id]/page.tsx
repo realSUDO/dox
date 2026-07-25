@@ -6,7 +6,7 @@ import Link from "next/link";
 import { toast } from "sonner";
 import { Button } from "~/components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "~/components/ui/card";
-import { Trash2, RefreshCw, Plus, Link as LinkIcon, FileText, CheckCircle } from "lucide-react";
+import { Trash2, RefreshCw, Plus, Link as LinkIcon, FileText, CheckCircle, MessageSquare } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -71,11 +71,18 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
           <h1 className="text-3xl font-bold tracking-tight">{project.name}</h1>
           {project.description && <p className="text-muted-foreground mt-2">{project.description}</p>}
         </div>
-        <Link href={`/projects/${projectId}/upload`}>
-          <Button>
-            <Plus className="mr-2 h-4 w-4" /> Add Source
-          </Button>
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link href={`/projects/${projectId}/chat`}>
+            <Button variant="outline">
+              <MessageSquare className="mr-2 h-4 w-4" /> Chat
+            </Button>
+          </Link>
+          <Link href={`/projects/${projectId}/upload`}>
+            <Button>
+              <Plus className="mr-2 h-4 w-4" /> Add Source
+            </Button>
+          </Link>
+        </div>
       </div>
 
       <div>

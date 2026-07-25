@@ -19,6 +19,13 @@ const envSchema = z.object({
     .string()
     .optional()
     .transform((v) => (v ? parseInt(v, 10) : 100)),
+    
+  // RAG config
+  CRAG_MIN_RELEVANCE: z.string().default("0.4"),
+  MIN_CHUNKS_REQUIRED: z.string().default("2"),
+  GENERATION_MODEL: z.string().default("gpt-4o-mini"),
+  QUERY_MODEL: z.string().default("gpt-4o-mini"),
+  RERANKER: z.string().default("local"),
 });
 
 function createEnv(env: NodeJS.ProcessEnv) {
