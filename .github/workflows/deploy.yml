@@ -85,12 +85,15 @@ jobs:
       - uses: appleboy/ssh-action@v1
         env:
           GITHUB_SHA_VAR: ${{ github.sha }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_ACTOR: ${{ github.actor }}
         with:
           host: ${{ secrets.VM_HOST }}
           username: ${{ secrets.VM_USER }}
           key: ${{ secrets.VM_SSH_KEY }}
-          envs: GITHUB_SHA_VAR
+          envs: GITHUB_SHA_VAR,GITHUB_TOKEN,GITHUB_ACTOR
           script: |
+            echo "$GITHUB_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
             cd ~/dox-app
             docker compose -f docker-compose.prod.yml pull
             docker compose -f docker-compose.prod.yml up -d --remove-orphans
