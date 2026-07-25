@@ -37,6 +37,7 @@
     "basic-auth": "^2.0.1",
     "bcrypt": "^6.0.0",
     "bullmq": "^5.81.0",
+    "canvas": "^3.2.3",
     "cookie": "^2.0.1",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
