@@ -1,0 +1,42 @@
+import { z } from "zod";
+import { adminProcedure, router } from "../../trpc";
+
+export const adminRouter = router({
+  listGuardrailEvents: adminProcedure
+    .input(
+      z.object({
+        userId: z.string().optional(),
+        projectId: z.string().optional(),
+        rule: z.string().optional(),
+        action: z.string().optional(),
+        page: z.number().min(1).default(1),
+        limit: z.number().min(1).max(100).default(50),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      const skip = (input.page - 1) * input.limit;
+      
+      const where: any = {};
+      if (input.userId) where.userId = input.userId;
+      if (input.projectId) where.projectId = input.projectId;
+      if (input.rule) where.rule = input.rule;
+      if (input.action) where.action = input.action;
+
+      const [events, total] = await Promise.all([
+        ctx.db.guardrailEvent.findMany({
+          where,
+          orderBy: { createdAt: "desc" },
+          take: input.limit,
+          skip,
+        }),
+        ctx.db.guardrailEvent.count({ where }),
+      ]);
+
+      return {
+        events,
+        total,
+        page: input.page,
+        totalPages: Math.ceil(total / input.limit),
+      };
+    }),
+});

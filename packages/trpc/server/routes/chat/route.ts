@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { protectedProcedure, router } from "../../trpc";
 import { TRPCError } from "@trpc/server";
-import { projectService, ragService } from "@repo/services";
+import { projectService, ragService, guardrailService } from "@repo/services";
 
 export const chatRouter = router({
   query: protectedProcedure
@@ -20,13 +20,28 @@ export const chatRouter = router({
         ["viewer", "editor", "owner"]
       );
 
-      // 2. Call RAG Pipeline
+      // 2. Input Guardrails
+      const guardrailInput = await guardrailService.checkInput(input.query, {
+        userId: ctx.user.id,
+        projectId: input.projectId,
+      });
+
+      if (!guardrailInput.allowed) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Query blocked by content policy",
+        });
+      }
+
+      // 3. Call RAG Pipeline
       try {
         const response = await ragService.query({
           projectId: input.projectId,
           userId: ctx.user.id,
-          query: input.query,
+          query: guardrailInput.sanitizedQuery,
           chatSessionId: input.chatSessionId,
+          piiMap: guardrailInput.piiMap,
+          originalQuery: input.query,
         });
 
         return response;

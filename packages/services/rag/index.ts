@@ -7,12 +7,15 @@ import { contextBuilder } from "./context-builder";
 import { generator, GenerationResult } from "./generator";
 import { logger } from "@repo/logger";
 import { db } from "@repo/database";
+import { guardrailService } from "../guardrails";
 
 export interface RAGQueryOptions {
   projectId: string;
   userId: string;
   query: string;
   chatSessionId?: string; // If resuming a session
+  piiMap?: Map<string, string>;
+  originalQuery?: string;
 }
 
 export interface RAGResponse extends GenerationResult {
@@ -133,22 +136,29 @@ export class RAGService {
       projectContext
     );
 
+    // 8.5 Output Guardrails
+    const outputGuard = await guardrailService.checkOutput(generation.answer, {
+      userId: options.userId,
+      projectId: options.projectId,
+      piiMap: options.piiMap || new Map(),
+    });
+    const safeAnswer = outputGuard.safeAnswer;
+
     // 9. Persist to Database
     // Insert user message
     await db.chatMessage.create({
       data: {
         chatSessionId,
         role: "user",
-        content: options.query,
+        content: options.originalQuery ?? options.query,
       },
     });
 
-    // Insert assistant message
     const assistantMsg = await db.chatMessage.create({
       data: {
         chatSessionId,
         role: "assistant",
-        content: generation.answer,
+        content: safeAnswer,
         promptTokens: generation.usage.promptTokens,
         completionTokens: generation.usage.completionTokens,
       },
@@ -171,6 +181,7 @@ export class RAGService {
 
     return {
       ...generation,
+      answer: safeAnswer,
       chatSessionId,
       messageId: assistantMsg.id,
     };

@@ -25,6 +25,17 @@ import type {
   ChunkJobData,
   OcrJobData,
 } from "@repo/services/queues";
+import { detectPromptInjection } from "@repo/services/guardrails";
+
+// Helper to sanitize extracted text for indirect injection
+function sanitizeExtractedText(text: string): string {
+  const injection = detectPromptInjection(text);
+  if (injection.isInjected) {
+    logger.warn("[extract-worker] Detected indirect prompt injection in source content, wrapping safely.");
+    return `[POTENTIAL_INJECTION_DETECTED]\n${text}\n[/POTENTIAL_INJECTION_DETECTED]`;
+  }
+  return text;
+}
 
 export const extractWorker = new Worker<ExtractJobData>(
   "extract-queue",
@@ -53,7 +64,7 @@ export const extractWorker = new Worker<ExtractJobData>(
 
       if (source.type === "text") {
         // ── Plain text source ────────────────────────────────────────
-        const text = extractText(source.textContent ?? "");
+        const text = sanitizeExtractedText(extractText(source.textContent ?? ""));
         extractedData.push({ type: "text", text });
 
       } else if (source.type === "link") {
@@ -65,7 +76,7 @@ export const extractWorker = new Worker<ExtractJobData>(
           const res = await fetch(source.sourceUrl!, { signal: controller.signal });
           if (!res.ok) throw new Error(`HTTP ${res.status} fetching ${source.sourceUrl}`);
           const html = await res.text();
-          const text = extractHtml(html, source.sourceUrl ?? undefined);
+          const text = sanitizeExtractedText(extractHtml(html, source.sourceUrl ?? undefined));
           extractedData.push({ type: "text", text });
         } finally {
           clearTimeout(timeout);
@@ -79,16 +90,19 @@ export const extractWorker = new Worker<ExtractJobData>(
 
         if (mimeType === "application/pdf") {
           const pages = await extractPdf(downloadPath);
+          pages.forEach(p => p.text = sanitizeExtractedText(p.text));
           extractedData.push({ type: "pdf", pages });
 
         } else if (mimeType === "application/x-subrip" || fileName.endsWith(".srt")) {
           const content = await fs.readFile(downloadPath, "utf-8");
           const cues = extractSrt(content);
+          cues.forEach(c => c.text = sanitizeExtractedText(c.text));
           extractedData.push({ type: "srt", cues });
 
         } else if (mimeType === "text/vtt" || fileName.endsWith(".vtt")) {
           const content = await fs.readFile(downloadPath, "utf-8");
           const cues = extractVtt(content);
+          cues.forEach(c => c.text = sanitizeExtractedText(c.text));
           extractedData.push({ type: "vtt", cues });
 
         } else if (mimeType === "application/zip") {
@@ -101,24 +115,27 @@ export const extractWorker = new Worker<ExtractJobData>(
             try {
               if (ext === ".pdf") {
                 const pages = await extractPdf(entry.filePath);
+                pages.forEach(p => p.text = sanitizeExtractedText(p.text));
                 extractedData.push({ type: "pdf", pages, fileName: entry.fileName });
                 validFiles.push(entry.fileName);
 
               } else if (ext === ".srt") {
                 const content = await fs.readFile(entry.filePath, "utf-8");
                 const cues = extractSrt(content);
+                cues.forEach(c => c.text = sanitizeExtractedText(c.text));
                 extractedData.push({ type: "srt", cues, fileName: entry.fileName });
                 validFiles.push(entry.fileName);
 
               } else if (ext === ".vtt") {
                 const content = await fs.readFile(entry.filePath, "utf-8");
                 const cues = extractVtt(content);
+                cues.forEach(c => c.text = sanitizeExtractedText(c.text));
                 extractedData.push({ type: "vtt", cues, fileName: entry.fileName });
                 validFiles.push(entry.fileName);
 
               } else if ([".txt", ".md", ".csv"].includes(ext)) {
                 const content = await fs.readFile(entry.filePath, "utf-8");
-                const text = extractText(content);
+                const text = sanitizeExtractedText(extractText(content));
                 extractedData.push({ type: "text", text, fileName: entry.fileName });
                 validFiles.push(entry.fileName);
 
@@ -200,7 +217,8 @@ export const extractWorker = new Worker<ExtractJobData>(
         } else {
           // ── Fallback: try plain text ─────────────────────────────────
           const content = await fs.readFile(downloadPath, "utf-8");
-          extractedData.push({ type: "text", text: content });
+          const text = sanitizeExtractedText(content);
+          extractedData.push({ type: "text", text });
         }
       }
 
