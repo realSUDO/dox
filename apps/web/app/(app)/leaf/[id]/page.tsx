@@ -68,10 +68,15 @@ export default function LeafPage() {
       setUploadingFiles((prev) => [...prev, { id: fileId, name: file.name, status: "uploading" }]);
       
       try {
+        let actualMimeType = file.type || "application/octet-stream";
+        if (file.name.toLowerCase().endsWith(".zip")) {
+          actualMimeType = "application/zip";
+        }
+
         const { sourceId, uploadUrl } = await getUploadUrlMutation.mutateAsync({
           leafId,
           fileName: file.name,
-          mimeType: (file.type || "application/octet-stream") as any,
+          mimeType: actualMimeType as any,
           fileSizeBytes: file.size,
         });
 

@@ -155,10 +155,15 @@ export default function KnowledgeBasePage({ params }: { params: Promise<{ id: st
   const handleUploadFile = async (selectedFile: File) => {
     setIsUploading(true);
     try {
+      let actualMimeType = selectedFile.type || "application/octet-stream";
+      if (selectedFile.name.toLowerCase().endsWith(".zip")) {
+        actualMimeType = "application/zip";
+      }
+
       const { sourceId, uploadUrl } = await getUploadUrlMutation.mutateAsync({
         leafId,
         fileName: selectedFile.name,
-        mimeType: (selectedFile.type || "application/octet-stream") as any,
+        mimeType: actualMimeType as any,
         fileSizeBytes: selectedFile.size,
       });
 
