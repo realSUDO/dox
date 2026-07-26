@@ -11,7 +11,7 @@ const openai = new OpenAI({
 
 export interface OutputCheckContext {
   userId: string;
-  projectId: string;
+  leafId: string;
   piiMap: Map<string, string>;
 }
 

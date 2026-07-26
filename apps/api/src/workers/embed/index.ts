@@ -9,7 +9,7 @@ import type { EmbedBatchJobData } from "@repo/services/queues";
 export const embedWorker = new Worker<EmbedBatchJobData>(
   "embed-queue",
   async (job: Job<EmbedBatchJobData>) => {
-    const { sourceId, projectId, indexVersion, chunkIds } = job.data;
+    const { sourceId, leafId, indexVersion, chunkIds } = job.data;
     logger.info(
       `[embed-worker] Started: sourceId=${sourceId} v=${indexVersion} chunks=${chunkIds.length}`,
     );
@@ -37,7 +37,7 @@ export const embedWorker = new Worker<EmbedBatchJobData>(
     }
 
     // ── 3. Ensure Qdrant collection exists ────────────────────────────────────
-    await qdrantService.ensureCollection(projectId);
+    await qdrantService.ensureCollection(leafId);
 
     // ── 4. Upsert vectors into Qdrant with full payload ───────────────────────
     const points = chunks.map((chunk, i) => ({
@@ -46,7 +46,7 @@ export const embedWorker = new Worker<EmbedBatchJobData>(
       payload: {
         chunkId: chunk.id,
         sourceId: chunk.sourceId,
-        projectId: chunk.projectId,
+        leafId: chunk.leafId,
         indexVersion: chunk.indexVersion,
         content: chunk.content,
         pageNumber: chunk.pageNumber ?? null,
@@ -60,7 +60,7 @@ export const embedWorker = new Worker<EmbedBatchJobData>(
       },
     }));
 
-    await qdrantService.upsertPoints(projectId, points);
+    await qdrantService.upsertPoints(leafId, points);
 
     // ── 5. Mark chunks as indexed in Postgres ─────────────────────────────────
     await db.chunk.updateMany({

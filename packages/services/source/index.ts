@@ -2,12 +2,13 @@ import { db } from "@repo/database";
 import { TRPCError } from "@trpc/server";
 import { spacesService } from "../spaces";
 import { queuesService } from "../queues";
-import { projectService } from "../project";
+import { projectService } from "../leaf";
 import { z } from "zod";
 import crypto from "node:crypto";
+import { env } from "../env";
 
 export const uploadSourceSchema = z.object({
-  projectId: z.string().uuid(),
+  leafId: z.string().uuid(),
   fileName: z.string().max(255).regex(/^[a-zA-Z0-9-_\.]+$/, "Invalid characters in filename"),
   mimeType: z.enum([
     "application/pdf",
@@ -23,7 +24,7 @@ export const uploadSourceSchema = z.object({
 });
 
 export const addLinkSchema = z.object({
-  projectId: z.string().uuid(),
+  leafId: z.string().uuid(),
   url: z
     .string()
     .url()
@@ -34,7 +35,7 @@ export const addLinkSchema = z.object({
 });
 
 export const addTextSchema = z.object({
-  projectId: z.string().uuid(),
+  leafId: z.string().uuid(),
   content: z.string().max(100000),
   title: z.string().max(255).optional(),
 });
@@ -45,17 +46,17 @@ export type AddTextInput = z.infer<typeof addTextSchema>;
 
 export class SourceService {
   async createPresignedUpload(userId: string, input: UploadSourceInput) {
-    await projectService.assertMembership(userId, input.projectId, ["editor", "owner"]);
+    await projectService.assertMembership(userId, input.leafId, ["editor", "owner"]);
 
     const sourceId = crypto.randomUUID();
-    const storageKey = `projects/${input.projectId}/sources/${sourceId}/${input.fileName}`;
+    const storageKey = `leafs/${input.leafId}/sources/${sourceId}/${input.fileName}`;
 
     const uploadUrl = await spacesService.createPresignedPutUrl(storageKey, input.mimeType);
 
     const source = await db.source.create({
       data: {
         id: sourceId,
-        projectId: input.projectId,
+        leafId: input.leafId,
         uploadedBy: userId,
         type: "file",
         fileName: input.fileName,
@@ -78,7 +79,7 @@ export class SourceService {
       throw new TRPCError({ code: "NOT_FOUND", message: "Source not found" });
     }
 
-    await projectService.assertMembership(userId, source.projectId, ["editor", "owner"]);
+    await projectService.assertMembership(userId, source.leafId, ["editor", "owner"]);
 
     if (source.status !== "pending_upload") {
       throw new TRPCError({ code: "BAD_REQUEST", message: "Source is not pending upload" });
@@ -99,7 +100,7 @@ export class SourceService {
 
     await queuesService.addExtractJob(sourceId, {
       sourceId,
-      projectId: source.projectId,
+      leafId: source.leafId,
       jobType: "ingest",
       indexVersion: updatedSource.indexVersion,
     });
@@ -108,11 +109,11 @@ export class SourceService {
   }
 
   async addLink(userId: string, input: AddLinkInput) {
-    await projectService.assertMembership(userId, input.projectId, ["editor", "owner"]);
+    await projectService.assertMembership(userId, input.leafId, ["editor", "owner"]);
 
     const source = await db.source.create({
       data: {
-        projectId: input.projectId,
+        leafId: input.leafId,
         uploadedBy: userId,
         type: "link",
         sourceUrl: input.url,
@@ -130,7 +131,7 @@ export class SourceService {
 
     await queuesService.addExtractJob(source.id, {
       sourceId: source.id,
-      projectId: source.projectId,
+      leafId: source.leafId,
       jobType: "ingest",
       indexVersion: source.indexVersion,
     });
@@ -139,11 +140,11 @@ export class SourceService {
   }
 
   async addText(userId: string, input: AddTextInput) {
-    await projectService.assertMembership(userId, input.projectId, ["editor", "owner"]);
+    await projectService.assertMembership(userId, input.leafId, ["editor", "owner"]);
 
     const source = await db.source.create({
       data: {
-        projectId: input.projectId,
+        leafId: input.leafId,
         uploadedBy: userId,
         type: "text",
         textContent: input.content,
@@ -162,7 +163,7 @@ export class SourceService {
 
     await queuesService.addExtractJob(source.id, {
       sourceId: source.id,
-      projectId: source.projectId,
+      leafId: source.leafId,
       jobType: "ingest",
       indexVersion: source.indexVersion,
     });
@@ -170,12 +171,12 @@ export class SourceService {
     return { sourceId: source.id, status: source.status };
   }
 
-  async listSources(userId: string, projectId: string) {
-    await projectService.assertMembership(userId, projectId, ["viewer", "editor", "owner"]);
+  async listSources(userId: string, leafId: string) {
+    await projectService.assertMembership(userId, leafId, ["viewer", "editor", "owner"]);
 
     return db.source.findMany({
       where: {
-        projectId,
+        leafId,
         deletedAt: null,
       },
       orderBy: {
@@ -193,7 +194,7 @@ export class SourceService {
       throw new TRPCError({ code: "NOT_FOUND", message: "Source not found" });
     }
 
-    await projectService.assertMembership(userId, source.projectId, ["viewer", "editor", "owner"]);
+    await projectService.assertMembership(userId, source.leafId, ["viewer", "editor", "owner"]);
 
     return source;
   }
@@ -207,7 +208,7 @@ export class SourceService {
       throw new TRPCError({ code: "NOT_FOUND", message: "Source not found" });
     }
 
-    await projectService.assertMembership(userId, source.projectId, ["editor", "owner"]);
+    await projectService.assertMembership(userId, source.leafId, ["editor", "owner"]);
 
     const updatedSource = await db.source.update({
       where: { id: sourceId },
@@ -224,7 +225,7 @@ export class SourceService {
 
     await queuesService.addCleanupJob(sourceId, {
       sourceId,
-      projectId: source.projectId,
+      leafId: source.leafId,
       jobType: "delete_vectors",
       // No indexVersion = full source deletion
     });
@@ -241,7 +242,7 @@ export class SourceService {
       throw new TRPCError({ code: "NOT_FOUND", message: "Source not found" });
     }
 
-    await projectService.assertMembership(userId, source.projectId, ["editor", "owner"]);
+    await projectService.assertMembership(userId, source.leafId, ["editor", "owner"]);
 
     if (source.status !== "indexed" && source.status !== "failed") {
       throw new TRPCError({ code: "BAD_REQUEST", message: "Source must be indexed or failed to reindex" });
@@ -265,7 +266,7 @@ export class SourceService {
 
     await queuesService.addReindexJob(sourceId, {
       sourceId,
-      projectId: source.projectId,
+      leafId: source.leafId,
       jobType: "reindex",
       indexVersion: updatedSource.indexVersion,
     });
@@ -280,14 +281,14 @@ export class SourceService {
   async approveSource(userId: string, sourceId: string) {
     const source = await db.source.findUnique({
       where: { id: sourceId },
-      include: { project: { include: { members: true } } },
+      include: { leaf: { include: { members: true } } },
     });
 
     if (!source) throw new Error("Source not found");
 
     // Only owners/editors can approve
-    const isOwner = source.project.ownerId === userId;
-    const isMemberEditor = source.project.members.some(
+    const isOwner = source.leaf.ownerId === userId;
+    const isMemberEditor = source.leaf.members.some(
       (m) => m.userId === userId && ["editor", "owner"].includes(m.role),
     );
     if (!isOwner && !isMemberEditor) {
@@ -333,14 +334,14 @@ export class SourceService {
       },
     });
 
-    // 3. Dispatch embed jobs in batches of 100
-    const EMBED_BATCH_SIZE = 100;
+    // 3. Dispatch embed jobs in configured batches
+    const EMBED_BATCH_SIZE = env.EMBED_BATCH_SIZE;
     for (let i = 0; i < chunkRecords.length; i += EMBED_BATCH_SIZE) {
       const batch = chunkRecords.slice(i, i + EMBED_BATCH_SIZE);
       const batchIndex = Math.floor(i / EMBED_BATCH_SIZE);
       await queuesService.addEmbedJob(sourceId, batchIndex, {
         sourceId,
-        projectId: source.projectId,
+        leafId: source.leafId,
         indexVersion: source.indexVersion,
         chunkIds: batch.map((c) => c.id),
       });

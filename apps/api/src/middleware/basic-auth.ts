@@ -3,7 +3,11 @@ import auth from "basic-auth";
 
 export function basicAuthMiddleware(req: Request, res: Response, next: NextFunction) {
   const credentials = auth(req);
-  const expectedEnv = process.env.METRICS_BASIC_AUTH || "admin:secret";
+  const expectedEnv = process.env.METRICS_BASIC_AUTH;
+  if (!expectedEnv) {
+    res.status(500).send("Metrics authentication is not configured.");
+    return;
+  }
   const [expectedUser, expectedPass] = expectedEnv.split(":");
 
   if (!credentials || credentials.name !== expectedUser || credentials.pass !== expectedPass) {

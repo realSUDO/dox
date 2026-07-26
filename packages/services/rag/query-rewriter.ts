@@ -40,7 +40,7 @@ User Query: ${query}
 Chat History:
 ${historyContext || "None"}
 
-Project Context (File Structure & Summaries):
+Leaf Context (File Structure & Summaries):
 ${projectContext || "None"}`;
 
     const response = await openai.chat.completions.parse({

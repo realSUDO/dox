@@ -8,11 +8,11 @@ import { randomUUID } from "node:crypto";
 async function main() {
   console.log("🧪 Testing QdrantService...\n");
 
-  const projectId = randomUUID();
+  const leafId = randomUUID();
   const sourceId = randomUUID();
   const chunkId = randomUUID();
   
-  console.log(`Using mock projectId: ${projectId}`);
+  console.log(`Using mock leafId: ${leafId}`);
   console.log(`Using mock sourceId: ${sourceId}`);
   console.log(`Using mock chunkId: ${chunkId}`);
 
@@ -23,20 +23,20 @@ async function main() {
 
   // Test 1: Ensure collection
   console.log("\nTest 1: ensureCollection");
-  await qdrantService.ensureCollection(projectId);
+  await qdrantService.ensureCollection(leafId);
   console.log(`✅ ensureCollection OK`);
 
   // Test 2: Upsert point
   console.log("\nTest 2: upsertPoints");
   const dummyVector = new Array(1536).fill(0.1);
-  await qdrantService.upsertPoints(projectId, [
+  await qdrantService.upsertPoints(leafId, [
     {
       id: chunkId,
       vector: dummyVector,
       payload: {
         chunkId,
         sourceId,
-        projectId,
+        leafId,
         indexVersion: 1,
         content: "Test content",
         pageNumber: null,
@@ -46,6 +46,7 @@ async function main() {
         sourceType: "text",
         fileName: null,
         sourceUrl: null,
+        subFileName: null,
       },
     },
   ]);
@@ -53,14 +54,14 @@ async function main() {
 
   // Test 3: Count
   console.log("\nTest 3: countByFilter");
-  const count = await qdrantService.countByFilter(projectId, { sourceId });
+  const count = await qdrantService.countByFilter(leafId, { sourceId });
   console.assert(count === 1, `Expected 1 point, got ${count}`);
   console.log(`✅ countByFilter OK (count = ${count})`);
 
   // Test 4: Delete
   console.log("\nTest 4: deleteByFilter");
-  await qdrantService.deleteByFilter(projectId, { sourceId });
-  const countAfterDelete = await qdrantService.countByFilter(projectId, { sourceId });
+  await qdrantService.deleteByFilter(leafId, { sourceId });
+  const countAfterDelete = await qdrantService.countByFilter(leafId, { sourceId });
   console.assert(countAfterDelete === 0, `Expected 0 points after delete, got ${countAfterDelete}`);
   console.log("✅ deleteByFilter OK");
 

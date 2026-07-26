@@ -8,7 +8,7 @@ import { extractImageOcr } from "@repo/services/ingestion/extract/image";
 export const ocrWorker = new Worker<OcrJobData>(
   "ocr-queue",
   async (job: Job<OcrJobData>) => {
-    const { sourceId, projectId, indexVersion, filePath } = job.data;
+    const { sourceId, leafId, indexVersion, filePath } = job.data;
     logger.info(`OCR job started for source ${sourceId}`);
 
     try {
@@ -16,7 +16,7 @@ export const ocrWorker = new Worker<OcrJobData>(
 
       await queuesService.addChunkJob(sourceId, {
         sourceId,
-        projectId,
+        leafId,
         indexVersion,
         extractedData: [{ type: "text", text }],
       });

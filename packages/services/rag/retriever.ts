@@ -21,7 +21,7 @@ export class Retriever {
    * Hybrid retrieval using Qdrant (dense) and Postgres (sparse/FTS).
    */
   async retrieve(
-    projectId: string,
+    leafId: string,
     queries: string[],
     limit: number = 20
   ): Promise<RetrievedChunk[][]> {
@@ -44,11 +44,11 @@ export class Retriever {
       if (!vector) continue;
 
       searchPromises.push(
-        qdrantService.search(projectId, {
+        qdrantService.search(leafId, {
           vector,
           limit,
           filter: {
-            must: [{ key: "projectId", match: { value: projectId } }],
+            must: [{ key: "leafId", match: { value: leafId } }],
           },
         }).then(points => points.map(p => ({
           chunkId: p.payload.chunkId,
@@ -82,7 +82,7 @@ export class Retriever {
             ts_rank_cd(c.content_tsv, plainto_tsquery('english', ${query})) AS score
           FROM chunks c
           JOIN sources s ON s.id = c.source_id
-          WHERE c.project_id = ${projectId}
+          WHERE c.project_id = ${leafId}
             AND c.status = 'indexed'
             AND c.content_tsv @@ plainto_tsquery('english', ${query})
           ORDER BY score DESC

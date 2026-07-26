@@ -11,7 +11,7 @@ const openai = new OpenAI({
 
 export interface InputCheckContext {
   userId: string;
-  projectId: string;
+  leafId: string;
 }
 
 export interface GuardrailEventPayload {
@@ -93,8 +93,14 @@ export async function checkInput(query: string, ctx: InputCheckContext): Promise
       return { allowed: false, sanitizedQuery: piiResult.maskedText, piiMap: piiResult.piiMap, events };
     }
   } catch (err) {
-    logger.error("[Guardrails] OpenAI Moderation API failed during input check, failing open.", { err });
-    // Fail open: log warning but don't block
+    logger.error("[Guardrails] OpenAI Moderation API failed during input check, failing closed.", { err });
+    events.push({
+      stage: "input",
+      rule: "policy",
+      action: "blocked",
+      payload: { excerpt: "System unavailable to verify safety." }
+    });
+    return { allowed: false, sanitizedQuery: piiResult.maskedText, piiMap: piiResult.piiMap, events };
   }
 
   return {

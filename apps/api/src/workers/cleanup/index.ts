@@ -9,7 +9,7 @@ import type { CleanupJobData } from "@repo/services/queues";
 export const cleanupWorker = new Worker<CleanupJobData>(
   "cleanup-queue",
   async (job: Job<CleanupJobData>) => {
-    const { sourceId, projectId, indexVersion } = job.data;
+    const { sourceId, leafId, indexVersion } = job.data;
     logger.info(
       `[cleanup-worker] Started: sourceId=${sourceId}` +
       (indexVersion !== undefined ? ` stale v<${indexVersion}` : " full delete"),
@@ -23,7 +23,7 @@ export const cleanupWorker = new Worker<CleanupJobData>(
     try {
       // ── 1. Delete Qdrant vectors ──────────────────────────────────────────
       // Must happen before Postgres chunk deletion (chunk IDs are the Qdrant point IDs)
-      await qdrantService.deleteByFilter(projectId, {
+      await qdrantService.deleteByFilter(leafId, {
         sourceId,
         ...(indexVersion !== undefined ? { indexVersionLt: indexVersion } : {}),
       });

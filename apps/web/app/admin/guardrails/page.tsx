@@ -38,7 +38,7 @@ export default function AdminGuardrailsPage() {
                   <TableRow>
                     <TableHead>Rule</TableHead>
                     <TableHead>Action Taken</TableHead>
-                    <TableHead>Project ID</TableHead>
+                    <TableHead>Leaf ID</TableHead>
                     <TableHead>User ID</TableHead>
                     <TableHead>Time</TableHead>
                   </TableRow>
@@ -57,7 +57,7 @@ export default function AdminGuardrailsPage() {
                         </Badge>
                       </TableCell>
                       <TableCell className="text-sm font-mono text-muted-foreground">
-                        {event.projectId?.split("-")[0] || "N/A"}
+                        {event.leafId?.split("-")[0] || "N/A"}
                       </TableCell>
                       <TableCell className="text-sm font-mono text-muted-foreground">
                         {event.userId?.split("-")[0] || "N/A"}

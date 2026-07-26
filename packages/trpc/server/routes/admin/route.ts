@@ -7,7 +7,7 @@ export const adminRouter = router({
     .input(
       z.object({
         userId: z.string().optional(),
-        projectId: z.string().optional(),
+        leafId: z.string().optional(),
         rule: z.string().optional(),
         action: z.string().optional(),
         page: z.number().min(1).default(1),
@@ -19,7 +19,7 @@ export const adminRouter = router({
       
       const where: any = {};
       if (input.userId) where.userId = input.userId;
-      if (input.projectId) where.projectId = input.projectId;
+      if (input.leafId) where.leafId = input.leafId;
       if (input.rule) where.rule = input.rule;
       if (input.action) where.action = input.action;
 

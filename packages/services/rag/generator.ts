@@ -51,7 +51,7 @@ export class Generator {
 Answer ONLY using the sources below. Never use prior knowledge.
 If the answer is not in the sources, say "I couldn't find this in the provided sources."
 
-Project Global Context (For background understanding only, do NOT cite these):
+Leaf Global Context (For background understanding only, do NOT cite these):
 ${projectContext || "None provided"}
 
 ${lengthInstruction}
@@ -122,7 +122,7 @@ Answer: To use libraries that are not supported in Expo Go, you need to create a
           }
 
           let cleanContent = chunk.content;
-          cleanContent = cleanContent.replace(/\[Project Summary:.*?\]\n\n/s, "");
+          cleanContent = cleanContent.replace(/\[Leaf Summary:.*?\]\n\n/s, "");
           cleanContent = cleanContent.replace(/\[File Path:.*?\]\n\n/s, "");
           const excerpt = cleanContent.substring(0, 150).replace(/\n/g, ' ') + "...";
 
@@ -144,6 +144,50 @@ Answer: To use libraries that are not supported in Expo Go, you need to create a
     return {
       answer,
       citations,
+      usage: {
+        promptTokens: usage.prompt_tokens,
+        completionTokens: usage.completion_tokens,
+      },
+    };
+  }
+
+  /**
+   * Generates a fast fallback response when the user attempts to chat
+   * without having any sources in their knowledge base.
+   */
+  async generateEmptyStateFallback(
+    query: string,
+    chatHistory: { role: "user" | "assistant"; content: string }[]
+  ): Promise<GenerationResult> {
+    const systemPrompt = `You are an annoyingly insistent assistant for Dox (a knowledge synthesis workspace).
+The user is trying to ask a question, but they haven't uploaded any documents to their knowledge base.
+You must refuse to answer their question, EXCEPT if they ask how to upload a document/knowledge base.
+If they ask how to upload, briefly tell them to use the 'Knowledge Base' link in the sidebar or the 'Upload' button in the chat.
+Otherwise, briefly state what Dox is, and firmly insist they upload a knowledge source first.
+RULES:
+- Maximum 20 words.
+- Be slightly annoying and dismissive.
+- Do NOT answer their actual question unless it's about how to upload.`;
+
+    logger.debug("[Generator] Calling LLM for empty state fallback...");
+
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        { role: "system", content: systemPrompt },
+        ...chatHistory,
+        { role: "user", content: query },
+      ],
+      temperature: 0.8,
+      max_tokens: 30,
+    });
+
+    const answer = response.choices[0]?.message?.content || "Please add a knowledge source first.";
+    const usage = response.usage || { prompt_tokens: 0, completion_tokens: 0 };
+
+    return {
+      answer,
+      citations: [],
       usage: {
         promptTokens: usage.prompt_tokens,
         completionTokens: usage.completion_tokens,

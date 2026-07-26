@@ -36,9 +36,9 @@ export class Reranker {
       const reranked: RerankedChunk[] = [];
 
       for (const chunk of chunks) {
-        // Strip noisy [Project Summary...] and [File Path...] that chunk worker baked in, as they ruin relevance scoring
+        // Strip noisy [Leaf Summary...] and [File Path...] that chunk worker baked in, as they ruin relevance scoring
         let cleanContent = chunk.content;
-        cleanContent = cleanContent.replace(/\[Project Summary:.*?\]\n\n/s, "");
+        cleanContent = cleanContent.replace(/\[Leaf Summary:.*?\]\n\n/s, "");
         cleanContent = cleanContent.replace(/\[File Path:.*?\]\n\n/s, "");
 
         // Cross-encoders expect the input as a single string separated by a token (usually [SEP] or similar depending on model).

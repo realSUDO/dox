@@ -10,7 +10,7 @@ import { db } from "@repo/database";
 import { guardrailService } from "../guardrails";
 
 export interface RAGQueryOptions {
-  projectId: string;
+  leafId: string;
   userId: string;
   query: string;
   chatSessionId?: string; // If resuming a session
@@ -28,7 +28,7 @@ export class RAGService {
    * Orchestrates the full RAG pipeline for a given query.
    */
   async query(options: RAGQueryOptions): Promise<RAGResponse> {
-    logger.info(`[RAGService] Starting pipeline for query: "${options.query}" (Project: ${options.projectId})`);
+    logger.info(`[RAGService] Starting pipeline for query: "${options.query}" (Leaf: ${options.leafId})`);
 
     // 1. Fetch Chat History (if session exists)
     let chatSessionId = options.chatSessionId;
@@ -48,7 +48,7 @@ export class RAGService {
       // Create new session
       const session = await db.chatSession.create({
         data: {
-          projectId: options.projectId,
+          leafId: options.leafId,
           userId: options.userId,
           title: options.query.substring(0, 50),
         },
@@ -60,9 +60,9 @@ export class RAGService {
       .map((msg) => `${msg.role.toUpperCase()}: ${msg.content}`)
       .join("\n");
 
-    // 1.5 Fetch Project Context (Summaries & File Trees)
+    // 1.5 Fetch Leaf Context (Summaries & File Trees)
     const sources = await db.source.findMany({
-      where: { projectId: options.projectId, status: "indexed" },
+      where: { leafId: options.leafId, status: "indexed" },
       select: { metadata: true, fileName: true }
     });
     
@@ -81,10 +81,10 @@ export class RAGService {
     }
     
     if (summaries.length > 0) {
-      projectContext += `Project Summaries:\n${summaries.join("\n")}\n\n`;
+      projectContext += `Leaf Summaries:\n${summaries.join("\n")}\n\n`;
     }
     if (fileTrees.length > 0) {
-      projectContext += `Project File Structure (Available Documents & Directories):\n${fileTrees.slice(0, 100).map(f => `- ${f}`).join("\n")}\n\n`;
+      projectContext += `Leaf File Structure (Available Documents & Directories):\n${fileTrees.slice(0, 100).map(f => `- ${f}`).join("\n")}\n\n`;
     }
 
     // 2. Query Rewrite & Analysis
@@ -105,7 +105,7 @@ export class RAGService {
       attempts++;
       logger.debug(`[RAGService] Retrieval attempt ${attempts} (limit: ${limit})`);
       
-      const retrievalLists = await retriever.retrieve(options.projectId, activeQueries, limit);
+      const retrievalLists = await retriever.retrieve(options.leafId, activeQueries, limit);
       const rrfChunks = rrf.merge(retrievalLists, 30 + (attempts * 10));
       const rerankedChunks = await reranker.rerank(rewrite.rewrittenQuery, rrfChunks, 8 + (attempts * 2));
       
@@ -139,7 +139,7 @@ export class RAGService {
     // 8.5 Output Guardrails
     const outputGuard = await guardrailService.checkOutput(generation.answer, {
       userId: options.userId,
-      projectId: options.projectId,
+      leafId: options.leafId,
       piiMap: options.piiMap || new Map(),
     });
     const safeAnswer = outputGuard.safeAnswer;
@@ -184,6 +184,64 @@ export class RAGService {
       answer: safeAnswer,
       chatSessionId,
       messageId: assistantMsg.id,
+    };
+  }
+
+  /**
+   * Fast fallback for when the user has no sources in the knowledge base.
+   */
+  async emptyStateQuery(options: RAGQueryOptions): Promise<RAGResponse> {
+    logger.info(`[RAGService] Fast empty state fallback for query: "${options.query}" (Leaf: ${options.leafId})`);
+
+    let chatSessionId = options.chatSessionId;
+    let chatHistory: { role: "user" | "assistant"; content: string }[] = [];
+
+    if (chatSessionId) {
+      const historyRows = await db.chatMessage.findMany({
+        where: { chatSessionId },
+        orderBy: { createdAt: "asc" },
+        take: 6,
+      });
+      chatHistory = historyRows.map((row) => ({
+        role: row.role as "user" | "assistant",
+        content: row.content,
+      }));
+    } else {
+      const session = await db.chatSession.create({
+        data: {
+          leafId: options.leafId,
+          userId: options.userId,
+          title: options.query.substring(0, 50),
+        },
+      });
+      chatSessionId = session.id;
+    }
+
+    // Save the user's message immediately
+    await db.chatMessage.create({
+      data: {
+        chatSessionId,
+        role: "user",
+        content: options.query,
+      },
+    });
+
+    const result = await generator.generateEmptyStateFallback(options.query, chatHistory);
+
+    // Save the assistant's message
+    const msg = await db.chatMessage.create({
+      data: {
+        chatSessionId,
+        role: "assistant",
+        content: result.answer,
+        promptTokens: result.usage.promptTokens,
+      },
+    });
+
+    return {
+      ...result,
+      chatSessionId,
+      messageId: msg.id,
     };
   }
 }

@@ -21,7 +21,7 @@ export const reindexWorker = new Worker<ReindexJobData>(
       // Queue cleanup for OLD version chunks (stale after reindex)
       await queuesService.addCleanupJob(sourceId, {
         sourceId,
-        projectId: job.data.projectId,
+        leafId: job.data.leafId,
         jobType: "delete_vectors",
         indexVersion, // cleanup will delete indexVersion < this value
       });

@@ -6,7 +6,7 @@
 // ─── Extract Worker ───────────────────────────────────────────────
 export interface ExtractJobData {
   sourceId: string;
-  projectId: string;
+  leafId: string;
   jobType: "ingest" | "reindex";
   indexVersion: number;
 }
@@ -14,7 +14,7 @@ export interface ExtractJobData {
 // ─── OCR Worker ───────────────────────────────────────────────────
 export interface OcrJobData {
   sourceId: string;
-  projectId: string;
+  leafId: string;
   indexVersion: number;
   filePath: string;
 }
@@ -61,7 +61,7 @@ export type ExtractedItem = (
 
 export interface ChunkJobData {
   sourceId: string;
-  projectId: string;
+  leafId: string;
   indexVersion: number;
   extractedData: ExtractedItem[];
 }
@@ -69,7 +69,7 @@ export interface ChunkJobData {
 // ─── Cleanup Worker ───────────────────────────────────────────────
 export interface CleanupJobData {
   sourceId: string;
-  projectId: string;
+  leafId: string;
   jobType: "delete_vectors";
   /** If provided, deletes only chunks with indexVersion < this value (stale after reindex).
    *  If undefined, deletes ALL chunks for the source (full source deletion). */
@@ -79,7 +79,7 @@ export interface CleanupJobData {
 // ─── Reindex Worker ───────────────────────────────────────────────
 export interface ReindexJobData {
   sourceId: string;
-  projectId: string;
+  leafId: string;
   jobType: "reindex";
   indexVersion: number; // the NEW version
 }
@@ -87,7 +87,7 @@ export interface ReindexJobData {
 // ─── Embed Worker ─────────────────────────────────────────────────
 export interface EmbedBatchJobData {
   sourceId: string;
-  projectId: string;
+  leafId: string;
   indexVersion: number;
   chunkIds: string[];
 }

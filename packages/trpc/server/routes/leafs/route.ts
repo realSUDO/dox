@@ -14,7 +14,7 @@ const projectSchema = z.object({
 
 export const projectsRouter = router({
   create: protectedProcedure
-    .meta({ openapi: { method: "POST", path: "/projects" } })
+    .meta({ openapi: { method: "POST", path: "/leafs" } })
     .input(createProjectSchema)
     .output(projectSchema)
     .mutation(async ({ input, ctx }) => {
@@ -22,7 +22,7 @@ export const projectsRouter = router({
     }),
 
   list: protectedProcedure
-    .meta({ openapi: { method: "GET", path: "/projects" } })
+    .meta({ openapi: { method: "GET", path: "/leafs" } })
     .input(z.void())
     .output(z.array(projectSchema))
     .query(async ({ ctx }) => {
@@ -30,7 +30,7 @@ export const projectsRouter = router({
     }),
 
   get: protectedProcedure
-    .meta({ openapi: { method: "GET", path: "/projects/{id}" } })
+    .meta({ openapi: { method: "GET", path: "/leafs/{id}" } })
     .input(z.object({ id: z.string().uuid() }))
     .output(projectSchema)
     .query(async ({ input, ctx }) => {

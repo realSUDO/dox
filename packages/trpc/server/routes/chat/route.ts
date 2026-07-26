@@ -7,7 +7,7 @@ export const chatRouter = router({
   query: protectedProcedure
     .input(
       z.object({
-        projectId: z.string(),
+        leafId: z.string(),
         query: z.string().min(1).max(2000),
         chatSessionId: z.string().optional(),
       })
@@ -16,14 +16,28 @@ export const chatRouter = router({
       // 1. Assert membership
       await projectService.assertMembership(
         ctx.user.id,
-        input.projectId,
+        input.leafId,
         ["viewer", "editor", "owner"]
       );
 
-      // 2. Input Guardrails
+      // 2. Check for Empty Knowledge Base state
+      const sourceCount = await ctx.db.source.count({
+        where: { leafId: input.leafId }
+      });
+
+      if (sourceCount === 0) {
+        return ragService.emptyStateQuery({
+          leafId: input.leafId,
+          userId: ctx.user.id,
+          query: input.query,
+          chatSessionId: input.chatSessionId,
+        });
+      }
+
+      // 3. Input Guardrails
       const guardrailInput = await guardrailService.checkInput(input.query, {
         userId: ctx.user.id,
-        projectId: input.projectId,
+        leafId: input.leafId,
       });
 
       if (!guardrailInput.allowed) {
@@ -36,7 +50,7 @@ export const chatRouter = router({
       // 3. Call RAG Pipeline
       try {
         const response = await ragService.query({
-          projectId: input.projectId,
+          leafId: input.leafId,
           userId: ctx.user.id,
           query: guardrailInput.sanitizedQuery,
           chatSessionId: input.chatSessionId,
@@ -54,16 +68,16 @@ export const chatRouter = router({
     }),
 
   listSessions: protectedProcedure
-    .input(z.object({ projectId: z.string() }))
+    .input(z.object({ leafId: z.string() }))
     .query(async ({ ctx, input }) => {
       await projectService.assertMembership(
         ctx.user.id,
-        input.projectId,
+        input.leafId,
         ["viewer", "editor", "owner"]
       );
 
       const sessions = await ctx.db.chatSession.findMany({
-        where: { projectId: input.projectId, userId: ctx.user.id },
+        where: { leafId: input.leafId, userId: ctx.user.id },
         orderBy: { updatedAt: "desc" },
       });
 
@@ -97,20 +111,20 @@ export const chatRouter = router({
   createSession: protectedProcedure
     .input(
       z.object({
-        projectId: z.string(),
+        leafId: z.string(),
         title: z.string().optional(),
       })
     )
     .mutation(async ({ ctx, input }) => {
       await projectService.assertMembership(
         ctx.user.id,
-        input.projectId,
+        input.leafId,
         ["viewer", "editor", "owner"]
       );
 
       const session = await ctx.db.chatSession.create({
         data: {
-          projectId: input.projectId,
+          leafId: input.leafId,
           userId: ctx.user.id,
           title: input.title || "New Chat",
         },

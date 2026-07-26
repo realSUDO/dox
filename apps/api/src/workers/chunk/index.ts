@@ -14,7 +14,7 @@ const EMBED_BATCH_SIZE = 100;
 export const chunkWorker = new Worker<ChunkJobData>(
   "chunk-queue",
   async (job: Job<ChunkJobData>) => {
-    const { sourceId, projectId, indexVersion, extractedData } = job.data;
+    const { sourceId, leafId, indexVersion, extractedData } = job.data;
     logger.info(`[chunk-worker] Started: sourceId=${sourceId} v=${indexVersion}`);
 
     const source = await db.source.update({
@@ -28,7 +28,7 @@ export const chunkWorker = new Worker<ChunkJobData>(
     try {
       const chunksToInsert: Array<{
         sourceId: string;
-        projectId: string;
+        leafId: string;
         indexVersion: number;
         chunkIndex: number;
         content: string;
@@ -49,13 +49,13 @@ export const chunkWorker = new Worker<ChunkJobData>(
           for (const chunk of chunks) {
             const rawText = normalizeText(chunk.text);
             const contentParts = [];
-            if (summary) contentParts.push(`[Project Summary: ${summary}]`);
+            if (summary) contentParts.push(`[Leaf Summary: ${summary}]`);
             if (item.fileName) contentParts.push(`[File Path: ${item.fileName}]`);
             contentParts.push(rawText);
 
             chunksToInsert.push({
               sourceId,
-              projectId,
+              leafId,
               indexVersion,
               chunkIndex: chunkIndex++,
               content: contentParts.join("\n\n"),
@@ -75,13 +75,13 @@ export const chunkWorker = new Worker<ChunkJobData>(
           for (const chunk of splitChunks) {
             const rawText = chunk.text;
             const contentParts = [];
-            if (summary) contentParts.push(`[Project Summary: ${summary}]`);
+            if (summary) contentParts.push(`[Leaf Summary: ${summary}]`);
             if (item.fileName) contentParts.push(`[File Path: ${item.fileName}]`);
             contentParts.push(rawText);
 
             chunksToInsert.push({
               sourceId,
-              projectId,
+              leafId,
               indexVersion,
               chunkIndex: chunkIndex++,
               content: contentParts.join("\n\n"),
@@ -97,13 +97,13 @@ export const chunkWorker = new Worker<ChunkJobData>(
           for (const chunk of splitChunks) {
             const rawText = chunk.text;
             const contentParts = [];
-            if (summary) contentParts.push(`[Project Summary: ${summary}]`);
+            if (summary) contentParts.push(`[Leaf Summary: ${summary}]`);
             if (item.fileName) contentParts.push(`[File Path: ${item.fileName}]`);
             contentParts.push(rawText);
 
             chunksToInsert.push({
               sourceId,
-              projectId,
+              leafId,
               indexVersion,
               chunkIndex: chunkIndex++,
               content: contentParts.join("\n\n"),

@@ -8,19 +8,19 @@ datasource db {
 }
 
 model User {
-  id           String    @id @default(uuid())
-  email        String    @unique @db.VarChar(255)
-  passwordHash String    @map("password_hash")
-  displayName  String?   @db.VarChar(100)
-  role         String    @default("user") @db.VarChar(20)
+  id           String   @id @default(uuid())
+  email        String   @unique @db.VarChar(255)
+  passwordHash String   @map("password_hash")
+  displayName  String?  @db.VarChar(100)
+  role         String   @default("user") @db.VarChar(20)
   // role: "user" | "admin"
-  createdAt    DateTime  @default(now()) @map("created_at")
-  updatedAt    DateTime  @updatedAt @map("updated_at")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
 
-  sessions         Session[]
-  ownedProjects    Project[]
-  projectMembers   ProjectMember[]
-  guardrailEvents  GuardrailEvent[]
+  sessions        Session[]
+  ownedLeafs      Leaf[]
+  leafMembers     LeafMember[]
+  guardrailEvents GuardrailEvent[]
 
   @@map("users")
 }
@@ -33,7 +33,7 @@ model Session {
   expiresAt DateTime @map("expires_at")
   createdAt DateTime @default(now()) @map("created_at")
   userAgent String?  @map("user_agent")
-  ipAddress String?  @db.VarChar(45) @map("ip_address")
+  ipAddress String?  @map("ip_address") @db.VarChar(45)
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -41,7 +41,7 @@ model Session {
   @@map("sessions")
 }
 
-model Project {
+model Leaf {
   id          String   @id @default(uuid())
   ownerId     String   @map("owner_id")
   name        String   @db.VarChar(200)
@@ -51,113 +51,113 @@ model Project {
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
-  owner          User            @relation(fields: [ownerId], references: [id])
-  members        ProjectMember[]
-  sources        Source[]
-  chatSessions   ChatSession[]
+  owner           User             @relation(fields: [ownerId], references: [id])
+  members         LeafMember[]
+  sources         Source[]
+  chatSessions    ChatSession[]
   guardrailEvents GuardrailEvent[]
 
   @@index([ownerId])
-  @@map("projects")
+  @@map("leafs")
 }
 
-model ProjectMember {
-  projectId String   @map("project_id")
-  userId    String   @map("user_id")
-  role      String   @default("viewer") @db.VarChar(20)
+model LeafMember {
+  leafId   String   @map("leaf_id")
+  userId   String   @map("user_id")
+  role     String   @default("viewer") @db.VarChar(20)
   // role: "viewer" | "editor" | "owner"
-  joinedAt  DateTime @default(now()) @map("joined_at")
+  joinedAt DateTime @default(now()) @map("joined_at")
 
-  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  leaf Leaf @relation(fields: [leafId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@id([projectId, userId])
-  @@map("project_members")
+  @@id([leafId, userId])
+  @@map("leaf_members")
 }
 
 model Source {
-  id             String    @id @default(uuid())
-  projectId      String    @map("project_id")
-  uploadedBy     String    @map("uploaded_by")
+  id         String @id @default(uuid())
+  leafId     String @map("leaf_id")
+  uploadedBy String @map("uploaded_by")
 
-  type           String    @db.VarChar(10)
+  type String @db.VarChar(10)
   // type: "file" | "link" | "text"
 
-  fileName       String?   @db.VarChar(500) @map("file_name")
-  mimeType       String?   @db.VarChar(100) @map("mime_type")
-  fileSizeBytes  BigInt?   @map("file_size_bytes")
-  storageKey     String?   @map("storage_key")
+  fileName      String? @map("file_name") @db.VarChar(500)
+  mimeType      String? @map("mime_type") @db.VarChar(100)
+  fileSizeBytes BigInt? @map("file_size_bytes")
+  storageKey    String? @map("storage_key")
 
-  sourceUrl      String?   @map("source_url")
-  textContent    String?   @map("text_content")
+  sourceUrl   String? @map("source_url")
+  textContent String? @map("text_content")
 
-  status         String    @default("pending_upload") @db.VarChar(30)
+  status String @default("pending_upload") @db.VarChar(30)
   // status: "pending_upload" | "queued" | "processing" | "embedding" | "indexed" | "reindex_queued" | "failed"
 
-  chunkCount     Int?      @map("chunk_count")
-  metadata       Json?
-  indexedAt      DateTime? @map("indexed_at")
-  indexVersion   Int       @default(1) @map("index_version")
-  lastError      String?   @map("last_error")
+  chunkCount   Int?      @map("chunk_count")
+  metadata     Json?
+  indexedAt    DateTime? @map("indexed_at")
+  indexVersion Int       @default(1) @map("index_version")
+  lastError    String?   @map("last_error")
 
-  createdAt      DateTime  @default(now()) @map("created_at")
-  updatedAt      DateTime  @updatedAt @map("updated_at")
-  deletedAt      DateTime? @map("deleted_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
 
-  project       Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  leaf          Leaf           @relation(fields: [leafId], references: [id], onDelete: Cascade)
   chunks        Chunk[]
   ingestionJobs IngestionJob[]
 
-  @@index([projectId])
+  @@index([leafId])
   @@index([status])
-  @@index([projectId, deletedAt])
+  @@index([leafId, deletedAt])
   @@map("sources")
 }
 
 model Chunk {
-  id             String   @id @default(uuid())
-  sourceId       String   @map("source_id")
-  projectId      String   @map("project_id")
-  indexVersion   Int      @default(1) @map("index_version")
-  chunkIndex     Int      @map("chunk_index")
+  id           String @id @default(uuid())
+  sourceId     String @map("source_id")
+  leafId       String @map("leaf_id")
+  indexVersion Int    @default(1) @map("index_version")
+  chunkIndex   Int    @map("chunk_index")
 
-  content        String
-  contentTsv     Unsupported("tsvector")? @map("content_tsv")
+  content    String
+  contentTsv Unsupported("tsvector")? @map("content_tsv")
   // contentTsv is a generated column managed via raw migration
   // Added manually in migration
 
-  pageNumber     Int?     @map("page_number")
-  startSeconds   Float?   @map("start_seconds")
-  endSeconds     Float?   @map("end_seconds")
-  timestampLabel String?  @db.VarChar(30) @map("timestamp_label")
+  pageNumber     Int?    @map("page_number")
+  startSeconds   Float?  @map("start_seconds")
+  endSeconds     Float?  @map("end_seconds")
+  timestampLabel String? @map("timestamp_label") @db.VarChar(30)
 
-  qdrantPointId  String   @map("qdrant_point_id")
+  qdrantPointId String @map("qdrant_point_id")
 
-  subFileName    String?  @db.VarChar(500) @map("sub_file_name")
+  subFileName String? @map("sub_file_name") @db.VarChar(500)
 
-  status         String   @default("pending") @db.VarChar(20)
+  status String @default("pending") @db.VarChar(20)
   // status: "pending" | "indexed" | "deleted"
 
-  createdAt      DateTime @default(now()) @map("created_at")
+  createdAt DateTime @default(now()) @map("created_at")
 
   source    Source     @relation(fields: [sourceId], references: [id], onDelete: Cascade)
   citations Citation[]
 
   @@index([sourceId])
-  @@index([projectId])
+  @@index([leafId])
   @@index([qdrantPointId])
   @@map("chunks")
 }
 
 model ChatSession {
   id        String   @id @default(uuid())
-  projectId String   @map("project_id")
+  leafId    String   @map("leaf_id")
   userId    String   @map("user_id")
   title     String?  @db.VarChar(300)
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  project  Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  leaf     Leaf          @relation(fields: [leafId], references: [id], onDelete: Cascade)
   messages ChatMessage[]
 
   @@map("chat_sessions")
@@ -186,7 +186,7 @@ model Citation {
   chunkId      String   @map("chunk_id")
   sourceId     String   @map("source_id")
   score        Float?
-  displayLabel String?  @db.VarChar(50) @map("display_label")
+  displayLabel String?  @map("display_label") @db.VarChar(50)
   createdAt    DateTime @default(now()) @map("created_at")
 
   message ChatMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
@@ -199,7 +199,7 @@ model Citation {
 model GuardrailEvent {
   id        String   @id @default(uuid())
   userId    String?  @map("user_id")
-  projectId String?  @map("project_id")
+  leafId    String?  @map("leaf_id")
   stage     String   @db.VarChar(20)
   // stage: "input" | "output"
   rule      String   @db.VarChar(100)
@@ -209,11 +209,11 @@ model GuardrailEvent {
   payload   Json?
   createdAt DateTime @default(now()) @map("created_at")
 
-  user    User?    @relation(fields: [userId], references: [id])
-  project Project? @relation(fields: [projectId], references: [id])
+  user User? @relation(fields: [userId], references: [id])
+  leaf Leaf? @relation(fields: [leafId], references: [id])
 
   @@index([userId])
-  @@index([projectId])
+  @@index([leafId])
   @@index([createdAt])
   @@map("guardrail_events")
 }
@@ -221,8 +221,8 @@ model GuardrailEvent {
 model IngestionJob {
   id           String    @id @default(uuid())
   sourceId     String    @map("source_id")
-  bullJobId    String?   @db.VarChar(100) @map("bull_job_id")
-  jobType      String    @db.VarChar(30) @map("job_type")
+  bullJobId    String?   @map("bull_job_id") @db.VarChar(100)
+  jobType      String    @map("job_type") @db.VarChar(30)
   // jobType: "ingest" | "embed" | "delete_vectors" | "reindex"
   status       String    @default("queued") @db.VarChar(20)
   // status: "queued" | "active" | "completed" | "failed" | "delayed"

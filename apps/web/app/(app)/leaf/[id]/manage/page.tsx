@@ -16,15 +16,15 @@ import {
   DialogTrigger,
 } from "~/components/ui/dialog";
 
-export default function ProjectDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id: projectId } = use(params);
+export default function LeafDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id: leafId } = use(params);
   const utils = trpc.useUtils();
 
-  const { data: project, isLoading: isProjectLoading } = trpc.projects.get.useQuery({ id: projectId });
+  const { data: leaf, isLoading: isLeafLoading } = trpc.leafs.get.useQuery({ id: leafId });
   
   // Poll every 3 seconds for source status updates
   const { data: sources, isLoading: isSourcesLoading } = trpc.sources.listSources.useQuery(
-    { projectId },
+    { leafId },
     { refetchInterval: 3000 }
   );
 
@@ -58,26 +58,26 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
     }
   });
 
-  if (isProjectLoading) return <div className="p-10 text-center">Loading project...</div>;
-  if (!project) return <div className="p-10 text-center">Project not found</div>;
+  if (isLeafLoading) return <div className="p-10 text-center">Loading leaf...</div>;
+  if (!leaf) return <div className="p-10 text-center">Leaf not found</div>;
 
   return (
-    <div className="container mx-auto py-10 max-w-5xl space-y-8">
+    <div className="container mx-auto py-10 max-w-5xl space-y-8 mt-16 px-6">
       <div className="flex justify-between items-start">
         <div>
-          <Link href="/projects" className="text-sm text-muted-foreground hover:underline mb-2 block">
-            &larr; Back to projects
+          <Link href="/" className="text-sm text-muted-foreground hover:underline mb-2 block">
+            &larr; Back to dashboard
           </Link>
-          <h1 className="text-3xl font-bold tracking-tight">{project.name}</h1>
-          {project.description && <p className="text-muted-foreground mt-2">{project.description}</p>}
+          <h1 className="text-3xl font-bold tracking-tight">{leaf.name}</h1>
+          {leaf.description && <p className="text-muted-foreground mt-2">{leaf.description}</p>}
         </div>
         <div className="flex items-center gap-2">
-          <Link href={`/projects/${projectId}/chat`}>
+          <Link href={`/leaf/${leafId}`}>
             <Button variant="outline">
-              <MessageSquare className="mr-2 h-4 w-4" /> Chat
+              <MessageSquare className="mr-2 h-4 w-4" /> Workspace
             </Button>
           </Link>
-          <Link href={`/projects/${projectId}/upload`}>
+          <Link href={`/leaf/${leafId}/upload`}>
             <Button>
               <Plus className="mr-2 h-4 w-4" /> Add Source
             </Button>
@@ -93,7 +93,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
           <div className="text-center py-10 border rounded-lg bg-muted/20">
             <h3 className="text-lg font-medium">No sources</h3>
             <p className="text-muted-foreground mb-4">Add some documents, links, or text to chat with.</p>
-            <Link href={`/projects/${projectId}/upload`}>
+            <Link href={`/leaf/${leafId}/upload`}>
               <Button variant="outline">Add your first source</Button>
             </Link>
           </div>
@@ -139,19 +139,19 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                               </DialogDescription>
                             </DialogHeader>
                             <div className="mt-4 space-y-4">
-                              {source.metadata?.summary && (
+                              {(source.metadata as any)?.summary && (
                                 <div>
                                   <h4 className="font-semibold text-sm mb-1 text-primary">Generated Summary</h4>
                                   <div className="p-3 bg-muted/50 rounded-md text-sm text-muted-foreground whitespace-pre-wrap">
-                                    {source.metadata.summary}
+                                    {(source.metadata as any).summary}
                                   </div>
                                 </div>
                               )}
-                              {source.metadata?.fileTree && Array.isArray(source.metadata.fileTree) && (
+                              {(source.metadata as any)?.fileTree && Array.isArray((source.metadata as any).fileTree) && (
                                 <div>
-                                  <h4 className="font-semibold text-sm mb-1 text-primary">Included Files ({source.metadata.fileTree.length})</h4>
+                                  <h4 className="font-semibold text-sm mb-1 text-primary">Included Files ({(source.metadata as any).fileTree.length})</h4>
                                   <div className="p-3 bg-muted/30 border rounded-md text-xs font-mono h-48 overflow-y-auto">
-                                    {source.metadata.fileTree.map((f: string, i: number) => (
+                                    {(source.metadata as any).fileTree.map((f: string, i: number) => (
                                       <div key={i} className="truncate">{f}</div>
                                     ))}
                                   </div>

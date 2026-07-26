@@ -9,7 +9,7 @@ import { z } from "zod";
 
 const sourceSchema = z.object({
   id: z.string().uuid(),
-  projectId: z.string().uuid(),
+  leafId: z.string().uuid(),
   uploadedBy: z.string().uuid(),
   type: z.string(),
   fileName: z.string().nullable(),
@@ -26,7 +26,7 @@ const sourceSchema = z.object({
   createdAt: z.date(),
   updatedAt: z.date(),
   deletedAt: z.date().nullable(),
-  metadata: z.any().nullable().optional(),
+  metadata: z.record(z.string(), z.unknown()).nullable().optional(),
 });
 
 const serializeSource = (s: any) => ({
@@ -74,11 +74,11 @@ export const sourcesRouter = router({
     }),
 
   listSources: protectedProcedure
-    .meta({ openapi: { method: "GET", path: "/projects/{projectId}/sources" } })
-    .input(z.object({ projectId: z.string().uuid() }))
+    .meta({ openapi: { method: "GET", path: "/leafs/{leafId}/sources" } })
+    .input(z.object({ leafId: z.string().uuid() }))
     .output(z.array(sourceSchema))
     .query(async ({ input, ctx }) => {
-      const sources = await sourceService.listSources(ctx.user.id, input.projectId);
+      const sources = await sourceService.listSources(ctx.user.id, input.leafId);
       return sources.map(serializeSource);
     }),
 

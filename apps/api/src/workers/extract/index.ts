@@ -40,7 +40,7 @@ function sanitizeExtractedText(text: string): string {
 export const extractWorker = new Worker<ExtractJobData>(
   "extract-queue",
   async (job: Job<ExtractJobData>) => {
-    const { sourceId, projectId, indexVersion } = job.data;
+    const { sourceId, leafId, indexVersion } = job.data;
     logger.info(`[extract-worker] Started: sourceId=${sourceId} v=${indexVersion}`);
 
     const source = await db.source.findUnique({ where: { id: sourceId } });
@@ -144,7 +144,7 @@ export const extractWorker = new Worker<ExtractJobData>(
                 // Delegate image files to OCR worker — they can't be inlined here
                 const ocrData: OcrJobData = {
                   sourceId,
-                  projectId,
+                  leafId,
                   indexVersion,
                   filePath: entry.filePath,
                 };
@@ -180,7 +180,7 @@ export const extractWorker = new Worker<ExtractJobData>(
               model: env.FAST_LLM_MODEL,
               messages: [{
                 role: "system",
-                content: "You are an expert software architect. Analyze the provided directory tree of an uploaded repository/ZIP. Write a concise 1-sentence summary explaining what this codebase or project is likely about based on its folders and file names."
+                content: "You are an expert software architect. Analyze the provided directory tree of an uploaded repository/ZIP. Write a concise 1-sentence summary explaining what this codebase or leaf is likely about based on its folders and file names."
               }, {
                 role: "user",
                 content: validFiles.join("\n")
@@ -206,7 +206,7 @@ export const extractWorker = new Worker<ExtractJobData>(
           // ── Image: delegate to OCR worker ───────────────────────────
           const ocrData: OcrJobData = {
             sourceId,
-            projectId,
+            leafId,
             indexVersion,
             filePath: downloadPath,
           };
@@ -229,7 +229,7 @@ export const extractWorker = new Worker<ExtractJobData>(
       // Route to chunk queue
       const chunkData: ChunkJobData = {
         sourceId,
-        projectId,
+        leafId,
         indexVersion,
         extractedData,
       };

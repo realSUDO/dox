@@ -16,14 +16,14 @@ export class GuardrailService {
     return result;
   }
 
-  private async persistEvents(events: any[], ctx: { userId: string; projectId: string }) {
+  private async persistEvents(events: any[], ctx: { userId: string; leafId: string }) {
     if (events.length === 0) return;
     
     try {
       await db.guardrailEvent.createMany({
         data: events.map(e => ({
           userId: ctx.userId,
-          projectId: ctx.projectId,
+          leafId: ctx.leafId,
           stage: e.stage,
           rule: e.rule,
           action: e.action,

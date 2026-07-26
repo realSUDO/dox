@@ -61,9 +61,9 @@ export class ContextBuilder {
         contextString += `[Location: ${location}]\n`;
       }
       
-      // Strip noisy [Project Summary...] and [File Path...] that chunk worker baked in, as we now provide better headers
+      // Strip noisy [Leaf Summary...] and [File Path...] that chunk worker baked in, as we now provide better headers
       let cleanContent = chunk.content;
-      cleanContent = cleanContent.replace(/\[Project Summary:.*?\]\n\n/s, "");
+      cleanContent = cleanContent.replace(/\[Leaf Summary:.*?\]\n\n/s, "");
       cleanContent = cleanContent.replace(/\[File Path:.*?\]\n\n/s, "");
 
       contextString += `---\n${cleanContent}\n---\n\n`;

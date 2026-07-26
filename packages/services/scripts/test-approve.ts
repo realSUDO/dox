@@ -14,7 +14,7 @@ async function main() {
   // Find the owner of this source to bypass permission checks easily for the script
   const source = await db.source.findUnique({
     where: { id: sourceId },
-    include: { project: true }
+    include: { leaf: true }
   });
 
   if (!source) {
@@ -31,7 +31,7 @@ async function main() {
   console.log("Approving...");
 
   try {
-    const result = await sourceService.approveSource(source.project.ownerId, sourceId);
+    const result = await sourceService.approveSource(source.leaf.ownerId, sourceId);
     console.log("Successfully approved!", result);
   } catch (error) {
     console.error("Failed to approve:", error);

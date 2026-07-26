@@ -11,7 +11,7 @@ export type CreateProjectInput = z.infer<typeof createProjectSchema>;
 
 export class ProjectService {
   async createProject(userId: string, input: CreateProjectInput) {
-    const project = await db.project.create({
+    const leaf = await db.leaf.create({
       data: {
         name: input.name,
         description: input.description,
@@ -24,11 +24,11 @@ export class ProjectService {
         },
       },
     });
-    return project;
+    return leaf;
   }
 
   async listProjects(userId: string) {
-    const projects = await db.project.findMany({
+    const leafs = await db.leaf.findMany({
       where: {
         members: {
           some: {
@@ -41,31 +41,31 @@ export class ProjectService {
         createdAt: "desc",
       },
     });
-    return projects;
+    return leafs;
   }
 
-  async getProject(projectId: string, userId: string) {
-    await this.assertMembership(userId, projectId, ["viewer", "editor", "owner"]);
+  async getProject(leafId: string, userId: string) {
+    await this.assertMembership(userId, leafId, ["viewer", "editor", "owner"]);
 
-    const project = await db.project.findUnique({
-      where: { id: projectId, status: "active" },
+    const leaf = await db.leaf.findUnique({
+      where: { id: leafId, status: "active" },
     });
 
-    if (!project) {
+    if (!leaf) {
       throw new TRPCError({
         code: "NOT_FOUND",
-        message: "Project not found",
+        message: "Leaf not found",
       });
     }
 
-    return project;
+    return leaf;
   }
 
-  async assertMembership(userId: string, projectId: string, allowedRoles: string[]) {
-    const membership = await db.projectMember.findUnique({
+  async assertMembership(userId: string, leafId: string, allowedRoles: string[]) {
+    const membership = await db.leafMember.findUnique({
       where: {
-        projectId_userId: {
-          projectId,
+        leafId_userId: {
+          leafId,
           userId,
         },
       },
@@ -74,14 +74,14 @@ export class ProjectService {
     if (!membership) {
       throw new TRPCError({
         code: "FORBIDDEN",
-        message: "You do not have access to this project.",
+        message: "You do not have access to this leaf.",
       });
     }
 
     if (!allowedRoles.includes(membership.role)) {
       throw new TRPCError({
         code: "FORBIDDEN",
-        message: "You do not have the required permissions for this project.",
+        message: "You do not have the required permissions for this leaf.",
       });
     }
 

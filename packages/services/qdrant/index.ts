@@ -7,7 +7,7 @@ import { env } from "../env";
 export interface QdrantPointPayload {
   chunkId: string;
   sourceId: string;
-  projectId: string;
+  leafId: string;
   indexVersion: number;
   content: string;
   pageNumber: number | null;
@@ -30,9 +30,9 @@ export interface QdrantPoint {
 const VECTOR_SIZE = 1536;
 const VECTOR_DISTANCE = "Cosine" as const;
 
-/** Derive Qdrant collection name from a project UUID */
-export function collectionName(projectId: string): string {
-  return `project_${projectId.replace(/-/g, "_")}`;
+/** Derive Qdrant collection name from a leaf UUID */
+export function collectionName(leafId: string): string {
+  return `project_${leafId.replace(/-/g, "_")}`;
 }
 
 // ── QdrantService ─────────────────────────────────────────────────────────────
@@ -67,11 +67,11 @@ export class QdrantService {
   }
 
   /**
-   * Idempotently create the Qdrant collection for a project.
+   * Idempotently create the Qdrant collection for a leaf.
    * Also creates payload indexes needed for delete-by-filter operations.
    */
-  async ensureCollection(projectId: string): Promise<void> {
-    const name = collectionName(projectId);
+  async ensureCollection(leafId: string): Promise<void> {
+    const name = collectionName(leafId);
     try {
       await this.request("PUT", `/collections/${name}`, {
         vectors: { size: VECTOR_SIZE, distance: VECTOR_DISTANCE },
@@ -81,7 +81,7 @@ export class QdrantService {
       // Create payload indexes
       await this.request("PUT", `/collections/${name}/index`, { field_name: "sourceId", field_schema: "keyword" });
       await this.request("PUT", `/collections/${name}/index`, { field_name: "indexVersion", field_schema: "integer" });
-      await this.request("PUT", `/collections/${name}/index`, { field_name: "projectId", field_schema: "keyword" });
+      await this.request("PUT", `/collections/${name}/index`, { field_name: "leafId", field_schema: "keyword" });
     } catch (err: any) {
       if (err.message.includes("already exists")) {
         logger.debug(`[QdrantService] Collection ${name} already exists — skipping create`);
@@ -92,11 +92,11 @@ export class QdrantService {
   }
 
   /**
-   * Upsert a batch of vectors into the project's collection.
+   * Upsert a batch of vectors into the leaf's collection.
    */
-  async upsertPoints(projectId: string, points: QdrantPoint[]): Promise<void> {
+  async upsertPoints(leafId: string, points: QdrantPoint[]): Promise<void> {
     if (points.length === 0) return;
-    const name = collectionName(projectId);
+    const name = collectionName(leafId);
 
     await this.request("PUT", `/collections/${name}/points?wait=true`, {
       points: points.map((p) => ({
@@ -113,10 +113,10 @@ export class QdrantService {
    * Delete all points matching a filter.
    */
   async deleteByFilter(
-    projectId: string,
+    leafId: string,
     filter: { sourceId: string; indexVersionLt?: number },
   ): Promise<void> {
-    const name = collectionName(projectId);
+    const name = collectionName(leafId);
     const mustConditions: any[] = [{ key: "sourceId", match: { value: filter.sourceId } }];
 
     if (filter.indexVersionLt !== undefined) {
@@ -134,10 +134,10 @@ export class QdrantService {
    * Count points matching a filter.
    */
   async countByFilter(
-    projectId: string,
+    leafId: string,
     filter: { sourceId: string; indexVersion?: number },
   ): Promise<number> {
-    const name = collectionName(projectId);
+    const name = collectionName(leafId);
     const mustConditions: any[] = [{ key: "sourceId", match: { value: filter.sourceId } }];
     if (filter.indexVersion !== undefined) {
       mustConditions.push({ key: "indexVersion", match: { value: filter.indexVersion } });
@@ -155,7 +155,7 @@ export class QdrantService {
    * Search for similar vectors in a collection, with optional filters.
    */
   async search(
-    projectId: string,
+    leafId: string,
     params: {
       vector: number[];
       filter?: any;
@@ -163,7 +163,7 @@ export class QdrantService {
       with_payload?: boolean;
     }
   ): Promise<QdrantPoint[]> {
-    const name = collectionName(projectId);
+    const name = collectionName(leafId);
     
     const result = await this.request("POST", `/collections/${name}/points/search`, {
       vector: params.vector,
