@@ -79,8 +79,9 @@ export const extractWorker = new Worker<ExtractJobData>(
         // ── Webpage or YouTube link ──────────────────────────────────
         if (source.sourceUrl && (source.sourceUrl.includes("youtube.com") || source.sourceUrl.includes("youtu.be"))) {
           const { extractYoutubeTranscript } = await import("@repo/services/ingestion/extract/youtube");
-          const text = sanitizeExtractedText(await extractYoutubeTranscript(source.sourceUrl));
-          extractedData.push({ type: "text", text });
+          const cues = await extractYoutubeTranscript(source.sourceUrl);
+          cues.forEach(c => c.text = sanitizeExtractedText(c.text));
+          extractedData.push({ type: "srt", cues, fileName: source.sourceUrl });
         } else {
           // Timeout after 30s, max 10MB per spec
           const controller = new AbortController();
