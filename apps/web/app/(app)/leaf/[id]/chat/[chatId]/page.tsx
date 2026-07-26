@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import { RouterOutputs } from "@repo/trpc/client";
 import { UploadCloud } from "lucide-react";
+import { FilePill } from "~/components/chat/file-pill";
 
 type ChatHistoryMsg = {
   id: string;
@@ -195,15 +196,15 @@ export default function ChatSessionPage({ params }: { params: Promise<{ id: stri
   }, [session?.messages, queryMutation.isPending]);
 
   useEffect(() => {
-    const filesToPoll = uploadingFiles.filter(f => f.status === 'processing');
+    const filesToPoll = uploadingFiles.filter(f => f.status === 'processing' || f.status === 'embedding');
     if (filesToPoll.length === 0) return;
 
     const interval = setInterval(async () => {
       for (const f of filesToPoll) {
         if (!f.sourceId) continue;
         try {
-          const source = await utils.sources.getSource.fetch({ sourceId: f.sourceId });
-          if (source.status === 'pending_approval') {
+          const source = await utils.client.sources.getSource.query({ sourceId: f.sourceId });
+          if (source.status === 'pending_approval' && f.status === 'processing') {
             setUploadingFiles(prev => prev.map(uf => uf.id === f.id ? { ...uf, status: 'pending_approval' } : uf));
           } else if (source.status === 'indexed') {
             setUploadingFiles(prev => prev.map(uf => uf.id === f.id ? { ...uf, status: 'success' } : uf));
@@ -290,47 +291,20 @@ export default function ChatSessionPage({ params }: { params: Promise<{ id: stri
         <div className="w-full flex flex-wrap gap-2 mb-2">
           <AnimatePresence>
             {uploadingFiles.map((file) => (
-              <motion.div
+              <FilePill
                 key={file.id}
-                initial={{ opacity: 0, y: 10, scale: 0.9 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.9 }}
-                className={`flex items-center gap-2 border rounded-[16px] pl-3 pr-2 py-1.5 shadow-sm text-sm transition-colors ${
-                  file.status === 'pending_approval' 
-                    ? "bg-primary/10 border-primary/30 text-primary" 
-                    : "bg-card border-border text-foreground"
-                }`}
-              >
-                {(file.status === 'uploading' || file.status === 'processing') && <Loader2 size={16} className="animate-spin text-primary shrink-0" />}
-                {file.status === 'pending_approval' && <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse shrink-0" />}
-                {file.status === 'success' && <CheckCircle2 size={16} className="text-green-600 shrink-0" />}
-                {file.status === 'error' && <X size={16} className="text-red-500 shrink-0" />}
-                <div className="flex flex-col justify-center">
-                  <span className="truncate max-w-[150px] font-medium leading-tight">{file.name}</span>
-                  {file.errorMessage && <span className="text-[10px] text-red-500 max-w-[200px] truncate leading-tight" title={file.errorMessage}>{file.errorMessage}</span>}
-                </div>
-                
-                {file.status === 'pending_approval' && (
-                  <button 
-                    type="button"
-                    onClick={() => {
-                      if (!file.sourceId) return;
-                      approveMutation.mutate({ sourceId: file.sourceId }, {
-                        onSuccess: () => {
-                          setUploadingFiles(prev => prev.map(uf => uf.id === file.id ? { ...uf, status: 'success' } : uf));
-                          setTimeout(() => {
-                            setUploadingFiles(prev => prev.filter(uf => uf.id !== file.id));
-                          }, 3000);
-                        }
-                      });
-                    }}
-                    disabled={approveMutation.isPending}
-                    className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-full py-1 px-3 transition-all flex items-center gap-1.5 shrink-0 ml-2 shadow-sm hover:shadow-md"
-                  >
-                    <span className="text-xs font-semibold tracking-wide uppercase">Approve</span>
-                  </button>
-                )}
-              </motion.div>
+                file={file as any}
+                onRemove={() => setUploadingFiles(prev => prev.filter(f => f.id !== file.id))}
+                isApproving={approveMutation.isPending}
+                onApprove={() => {
+                  if (!file.sourceId) return;
+                  approveMutation.mutate({ sourceId: file.sourceId }, {
+                    onSuccess: () => {
+                      setUploadingFiles(prev => prev.map(uf => uf.id === file.id ? { ...uf, status: 'embedding' } : uf));
+                    }
+                  });
+                }}
+              />
             ))}
           </AnimatePresence>
         </div>
@@ -420,9 +394,9 @@ export default function ChatSessionPage({ params }: { params: Promise<{ id: stri
           <div className="flex items-center gap-2 pr-1 pb-1 flex-none">
             <button
               onClick={handleSend}
-              disabled={!input.trim() || queryMutation.isPending}
+              disabled={!input.trim() || queryMutation.isPending || uploadingFiles.some(f => f.status === 'uploading' || f.status === 'processing' || f.status === 'embedding')}
               className="h-10 w-10 flex items-center justify-center bg-primary text-primary-foreground rounded-full hover:opacity-90 scale-100 active:scale-95 transition-transform disabled:opacity-50 flex-none"
-              title="Send"
+              title={uploadingFiles.some(f => f.status === 'uploading' || f.status === 'processing' || f.status === 'embedding') ? "Waiting for files to finish processing..." : "Send"}
             >
               {queryMutation.isPending ? (
                 <Loader2 size={20} className="animate-spin" />
