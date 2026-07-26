@@ -44,6 +44,9 @@ app.use(cookieParser());
 app.use(requestIdMiddleware);
 app.use(requestLoggerMiddleware);
 
+import { clerkMiddleware } from "@clerk/express";
+app.use(clerkMiddleware());
+
 // Set up Bull Board
 const serverAdapter = new ExpressAdapter();
 serverAdapter.setBasePath("/admin/queues");

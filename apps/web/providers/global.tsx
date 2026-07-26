@@ -17,10 +17,22 @@ const queryClient = new QueryClient({
   },
 });
 
+import { useAuth } from "@clerk/nextjs";
+import { useRef, useEffect } from "react";
+
 export const GlobalProviders: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { getToken } = useAuth();
+  const getTokenRef = useRef(getToken);
+  
+  useEffect(() => {
+    getTokenRef.current = getToken;
+  }, [getToken]);
+
   const [trpcClient] = useState(() =>
     trpc.createClient({
-      links: [createTRPCHttpBatchClientClient()],
+      links: [createTRPCHttpBatchClientClient({ 
+        getToken: () => getTokenRef.current() 
+      })],
     }),
   );
   return (

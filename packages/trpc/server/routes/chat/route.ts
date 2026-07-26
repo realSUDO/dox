@@ -41,9 +41,12 @@ export const chatRouter = router({
       });
 
       if (!guardrailInput.allowed) {
+        // Log detailed block reason for the user/admin
+        console.error(`[Chat Route] Query blocked by guardrails for user ${ctx.user.id}. Query: "${input.query}". Events:`, JSON.stringify(guardrailInput.events, null, 2));
+        
         throw new TRPCError({
           code: "BAD_REQUEST",
-          message: "Query blocked by content policy",
+          message: "Query blocked by content policy: " + guardrailInput.events.map(e => e.rule).join(", "),
         });
       }
 

@@ -82,7 +82,7 @@ export class Retriever {
             ts_rank_cd(c.content_tsv, plainto_tsquery('english', ${query})) AS score
           FROM chunks c
           JOIN sources s ON s.id = c.source_id
-          WHERE c.project_id = ${leafId}
+          WHERE c.leaf_id = ${leafId}
             AND c.status = 'indexed'
             AND c.content_tsv @@ plainto_tsquery('english', ${query})
           ORDER BY score DESC

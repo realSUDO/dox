@@ -20,6 +20,9 @@ export const metadata: Metadata = {
   description: "Connect your documents, research notes, and creative thoughts.",
 };
 
+import { ClerkProvider } from "@clerk/nextjs";
+import { shadcn } from "@clerk/ui/themes";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -28,7 +31,9 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${geistSans.variable} ${geistMono.variable} ${inter.variable} ${inter.className}`}>
-        <GlobalProviders>{children}</GlobalProviders>
+        <ClerkProvider appearance={{ theme: shadcn }}>
+          <GlobalProviders>{children}</GlobalProviders>
+        </ClerkProvider>
       </body>
     </html>
   );

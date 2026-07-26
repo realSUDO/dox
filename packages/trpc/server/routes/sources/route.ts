@@ -12,7 +12,7 @@ import { TRPCError } from "@trpc/server";
 const sourceSchema = z.object({
   id: z.string().uuid(),
   leafId: z.string().uuid(),
-  uploadedBy: z.string().uuid(),
+  uploadedBy: z.string(),
   type: z.string(),
   fileName: z.string().nullable(),
   mimeType: z.string().nullable(),
@@ -29,6 +29,9 @@ const sourceSchema = z.object({
   updatedAt: z.date(),
   deletedAt: z.date().nullable(),
   metadata: z.record(z.string(), z.unknown()).nullable().optional(),
+  zipSummary: z.string().nullable().optional(),
+  zipApproved: z.boolean().nullable().optional(),
+  zipFailedFiles: z.any().nullable().optional(),
 });
 
 const serializeSource = (s: any) => ({

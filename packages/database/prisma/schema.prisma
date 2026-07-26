@@ -100,6 +100,10 @@ model Source {
   indexVersion Int       @default(1) @map("index_version")
   lastError    String?   @map("last_error")
 
+  zipSummary     String? @map("zip_summary")
+  zipApproved    Boolean? @map("zip_approved")
+  zipFailedFiles Json?    @map("zip_failed_files")
+
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime  @updatedAt @map("updated_at")
   deletedAt DateTime? @map("deleted_at")

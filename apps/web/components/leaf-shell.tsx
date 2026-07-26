@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { UserButton } from "@clerk/nextjs";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { trpc } from "~/trpc/client";
@@ -125,8 +126,8 @@ export function LeafShell({
             <button className="p-2 rounded-lg hover:bg-[#eae7ea] transition-colors text-[#404945]">
               <Bell size={24} />
             </button>
-            <div className="w-8 h-8 rounded-full bg-[#144637]/10 flex items-center justify-center overflow-hidden ml-2 font-bold text-[#144637]">
-              U
+            <div className="ml-2">
+              <UserButton afterSignOutUrl="/" />
             </div>
           </div>
         </div>

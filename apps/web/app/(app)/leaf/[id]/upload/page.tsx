@@ -11,6 +11,18 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "~/components/ui/dropdown-menu";
 import { ScrollArea } from "~/components/ui/scroll-area";
 
+const getYoutubeVideoId = (url: string) => {
+  if (!url) return null;
+  try {
+    const urlObj = new URL(url);
+    if (urlObj.hostname.includes("youtube.com")) return urlObj.searchParams.get("v");
+    if (urlObj.hostname.includes("youtu.be")) return urlObj.pathname.slice(1);
+  } catch {
+    return null;
+  }
+  return null;
+};
+
 export default function KnowledgeBasePage({ params }: { params: Promise<{ id: string }> }) {
   const { id: leafId } = use(params);
   const router = useRouter();
@@ -317,6 +329,22 @@ export default function KnowledgeBasePage({ params }: { params: Promise<{ id: st
                             <span className="font-semibold">Error:</span> {source.lastError}
                           </div>
                         )}
+                        {source.zipSummary && (
+                          <div className="mt-2 text-xs text-[#404945] bg-[#f0edef]/50 p-3 rounded-lg border border-[#EBEBEB]">
+                            <div className="font-semibold text-[#144637] mb-1">AI Summary:</div>
+                            {source.zipSummary}
+                            {source.status === 'pending_approval' && source.zipApproved !== undefined && (
+                              <div className={`mt-2 font-medium ${source.zipApproved ? 'text-green-600' : 'text-red-600'}`}>
+                                AI Recommendation: {source.zipApproved ? 'Approve' : 'Reject'}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                        {source.zipFailedFiles && source.zipFailedFiles.length > 0 && (
+                          <div className="mt-2 text-xs text-yellow-700 bg-yellow-50 p-2 rounded border border-yellow-100">
+                            <span className="font-semibold">Warning:</span> {source.zipFailedFiles.length} file(s) failed to extract from this ZIP. They will be skipped.
+                          </div>
+                        )}
                       </div>
                     </div>
                     
@@ -395,6 +423,19 @@ export default function KnowledgeBasePage({ params }: { params: Promise<{ id: st
                   <a href={previewSource.sourceUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline break-all">
                     {previewSource.sourceUrl}
                   </a>
+                  {previewSource.sourceUrl && getYoutubeVideoId(previewSource.sourceUrl) && (
+                    <div className="mt-4 aspect-video w-full rounded-lg overflow-hidden border border-[#EBEBEB]">
+                      <iframe
+                        width="100%"
+                        height="100%"
+                        src={`https://www.youtube.com/embed/${getYoutubeVideoId(previewSource.sourceUrl)}`}
+                        title="YouTube video player"
+                        frameBorder="0"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
+                      ></iframe>
+                    </div>
+                  )}
                 </div>
               )}
               
@@ -428,16 +469,31 @@ export default function KnowledgeBasePage({ params }: { params: Promise<{ id: st
                 )
               ) : previewSource?.mimeType === 'application/zip' ? (
                 <div className="space-y-4">
-                  {previewSource.metadata?.summary ? (
+                  {previewSource.zipSummary || previewSource.metadata?.summary ? (
                     <div className="p-4 bg-[#f0edef] rounded-lg border border-[#c0c9c3]">
                       <h3 className="font-semibold text-[#144637] mb-2 flex items-center gap-2">
                         <FileArchive size={18} /> Repository Summary
                       </h3>
-                      <p className="text-[#1b1b1d] leading-relaxed">{previewSource.metadata.summary}</p>
+                      <p className="text-[#1b1b1d] leading-relaxed">{previewSource.zipSummary || previewSource.metadata.summary}</p>
+                      {previewSource.metadata?.reasoning && (
+                        <p className="mt-3 text-sm text-[#404945] italic">Reasoning: {previewSource.metadata.reasoning}</p>
+                      )}
                     </div>
                   ) : (
                     <div className="p-4 bg-yellow-50 text-yellow-800 rounded-lg border border-yellow-200 text-sm">
-                      Summary will be generated once this repository is approved for embedding.
+                      Summary will be generated once this repository is evaluated.
+                    </div>
+                  )}
+
+                  {previewSource.zipFailedFiles && previewSource.zipFailedFiles.length > 0 && (
+                    <div className="p-4 bg-red-50 rounded-lg border border-red-200">
+                      <h4 className="font-medium text-red-800 mb-2">Failed Files ({previewSource.zipFailedFiles.length})</h4>
+                      <p className="text-sm text-red-600 mb-3">The following files could not be processed and will be skipped.</p>
+                      <ul className="text-xs text-red-700 list-disc pl-4 space-y-1 max-h-[150px] overflow-y-auto">
+                        {previewSource.zipFailedFiles.map((f: any, i: number) => (
+                          <li key={i}>{f.fileName} - {f.error}</li>
+                        ))}
+                      </ul>
                     </div>
                   )}
 

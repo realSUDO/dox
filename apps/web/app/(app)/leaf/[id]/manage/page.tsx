@@ -139,11 +139,34 @@ export default function LeafDetailPage({ params }: { params: Promise<{ id: strin
                               </DialogDescription>
                             </DialogHeader>
                             <div className="mt-4 space-y-4">
-                              {(source.metadata as any)?.summary && (
+                              {(source.zipSummary || (source.metadata as any)?.summary) && (
                                 <div>
                                   <h4 className="font-semibold text-sm mb-1 text-primary">Generated Summary</h4>
                                   <div className="p-3 bg-muted/50 rounded-md text-sm text-muted-foreground whitespace-pre-wrap">
-                                    {(source.metadata as any).summary}
+                                    {source.zipSummary || (source.metadata as any).summary}
+                                  </div>
+                                </div>
+                              )}
+                              {source.zipApproved !== undefined && source.zipApproved !== null && (
+                                <div>
+                                  <h4 className="font-semibold text-sm mb-1 text-primary">AI Recommendation</h4>
+                                  <div className={`p-3 rounded-md text-sm font-medium ${source.zipApproved ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
+                                    {source.zipApproved ? 'Approve' : 'Reject'}
+                                    {(source.metadata as any)?.reasoning && (
+                                      <div className="mt-1 font-normal italic text-xs text-muted-foreground opacity-80">Reason: {(source.metadata as any).reasoning}</div>
+                                    )}
+                                  </div>
+                                </div>
+                              )}
+                              {source.zipFailedFiles && source.zipFailedFiles.length > 0 && (
+                                <div>
+                                  <h4 className="font-semibold text-sm mb-1 text-red-600 flex items-center gap-2">
+                                    Failed Files ({source.zipFailedFiles.length})
+                                  </h4>
+                                  <div className="p-3 bg-red-50/50 border border-red-100 rounded-md text-xs font-mono h-32 overflow-y-auto text-red-700">
+                                    {source.zipFailedFiles.map((f: any, i: number) => (
+                                      <div key={i} className="mb-1 truncate"><span className="font-semibold">{f.fileName}</span>: {f.error}</div>
+                                    ))}
                                   </div>
                                 </div>
                               )}

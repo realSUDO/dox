@@ -9,6 +9,8 @@
     "typescript": "^5.9.3"
   },
   "dependencies": {
+    "@clerk/backend": "^3.13.1",
+    "@clerk/express": "^2.1.46",
     "@repo/database": "workspace:*",
     "@repo/services": "workspace:*",
     "@trpc/client": "^11.8.1",

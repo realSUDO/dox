@@ -1,259 +1,124 @@
-# tRPC Monorepo Scaffold
+# Dox - Advanced RAG Workspace
 
-A full-stack TypeScript monorepo scaffold powered by **Turborepo**, **tRPC**, **Next.js**, **Express**, and **Drizzle ORM**. Clone this and start building — everything is pre-wired.
+Dox is a powerful, production-ready **Retrieval-Augmented Generation (RAG)** workspace. It allows users to create "Leafs" (workspaces), upload various sources (PDFs, Markdown, Videos/Audio via VTT/SRT, Web Links, and full Codebase ZIPs), and interact with them using conversational AI. 
+
+The system features an asynchronous distributed ingestion pipeline, robust guardrails, and an intelligent ZIP evaluation agent.
 
 ---
 
-## Stack
+## 🏗 Tech Stack
 
-| Layer | Tech |
+| Layer | Technology |
 |---|---|
-| Monorepo | [Turborepo](https://turborepo.com) + [pnpm workspaces](https://pnpm.io/workspaces) |
-| Frontend | [Next.js 16](https://nextjs.org) (App Router) |
-| Backend | [Express](https://expressjs.com) + [tRPC](https://trpc.io) |
-| API contract | [trpc-to-openapi](https://github.com/jlalmes/trpc-to-openapi) + [Scalar](https://scalar.com) |
-| Database | [PostgreSQL](https://postgresql.org) via [Drizzle ORM](https://orm.drizzle.team) |
-| Logging | [Winston](https://github.com/winstonjs/winston) |
-| UI components | [shadcn/ui](https://ui.shadcn.com) (Radix + Tailwind CSS v4) |
-| Type checking | TypeScript 5 |
-| Linting | ESLint + Prettier |
+| **Monorepo** | Turborepo + pnpm workspaces |
+| **Frontend** | Next.js (App Router), React, Tailwind CSS, shadcn/ui |
+| **Backend API** | Express + tRPC (Type-safe RPCs) |
+| **Authentication** | Clerk (`@clerk/nextjs`, `@clerk/express`) |
+| **Database** | PostgreSQL via **Prisma ORM** |
+| **Vector Database** | Qdrant |
+| **Queue/Workers** | BullMQ + Valkey (Redis) |
+| **Storage** | S3 API / DigitalOcean Spaces |
+| **AI / LLMs** | OpenAI (Embeddings & Chat Completions) |
 
 ---
 
-## Monorepo structure
+## 📂 Project Structure
 
-```
+```text
 .
 ├── apps/
-│   ├── api/          # Express server — tRPC + OpenAPI
-│   └── web/          # Next.js frontend
+│   ├── api/          # Express Server (tRPC) & BullMQ Ingestion Workers
+│   └── web/          # Next.js Frontend (UI & TRPC Client)
 └── packages/
-    ├── database/     # Drizzle ORM setup, schema, migrations
-    ├── eslint-config/ # Shared ESLint configs
-    ├── logger/        # Winston logger (shared)
-    ├── services/      # Business logic services
-    ├── trpc/          # Shared tRPC router, client, types
-    └── typescript-config/ # Shared tsconfig bases
+    ├── database/     # Prisma schema, migrations, and db client
+    ├── services/     # Core Business Logic (Queues, Extraction, RAG, Qdrant, Auth)
+    ├── trpc/         # Shared tRPC routers, API Context, Zod schemas
+    ├── logger/       # Shared Winston logging configuration
+    └── typescript-config/ 
 ```
 
 ---
 
-## Prerequisites
+## 🧠 Core Architecture & Pipelines
 
-- **Node.js** ≥ 18
-- **pnpm** 9 (`npm i -g pnpm@9`)
-- **Docker** (for local PostgreSQL, or supply your own `DATABASE_URL`)
+### 1. The Ingestion Pipeline (BullMQ)
+Document ingestion is decoupled from the main API thread using a robust BullMQ pipeline. 
+
+1. **Upload**: User uploads a file via pre-signed S3 URL.
+2. **Extract Queue**: Downloads the file, parses text based on mimetype (PDF, SRT, VTT, HTML). 
+3. **Chunk Queue**: Applies intelligent chunking (sliding window for transcripts, recursive splitting for text/PDFs).
+4. **Embed Queue**: Batches chunks, fetches OpenAI embeddings, and indexes them into Qdrant.
+5. **OCR Queue** (Images/Scans): Routes image files to an OCR worker before chunking.
+
+### 2. Intelligent ZIP Processing
+When a user uploads a `.zip` file (e.g., a codebase or massive dataset):
+- The `extract` worker extracts all valid text/code files, skipping unsupported binaries without crashing.
+- An **AI Evaluator** (GPT-4o) analyzes the directory tree and file contents.
+- It generates a **Repository Summary** and an **Approval Recommendation**.
+- The pipeline pauses in a `pending_approval` state.
+- The user reviews the AI's recommendation and explicitly approves the dataset in the UI before it is chunked and embedded.
+- The repository summary is prepended to every chunk (e.g., `[Leaf Summary: ...]`) to preserve global context for the RAG retriever.
+
+### 3. RAG Retrieval & Guardrails
+- **RRF (Reciprocal Rank Fusion)**: Multi-stage retrieval using dense vector search.
+- **Context Builder**: Formats the retrieved chunks with citation metadata.
+- **Guardrails**: Input and output guardrails to detect prompt injection, PII, and policy violations.
 
 ---
 
-## Getting started
+## 🚀 Getting Started Locally
 
-### 1. Clone and install
+### 1. Prerequisites
+- **Node.js** ≥ 18
+- **pnpm** ≥ 9
+- **Docker** (for running PostgreSQL, Valkey, and Qdrant locally)
+- Accounts for **Clerk** (Auth) and **OpenAI** (LLM)
 
+### 2. Install Dependencies
 ```bash
-git clone <your-repo-url>
-cd <repo-name>
 pnpm install
 ```
 
-### 2. Set up environment
-
-Copy the example env file and fill in values:
-
+### 3. Environment Variables
+Copy the `.env.example` file to `.env`:
 ```bash
 cp .env.example .env
 ```
-
-Then run the setup script, which symlinks `.env` into every app and package automatically:
-
+Fill in the necessary keys (specifically `OPENAI_API_KEY`, `CLERK_SECRET_KEY`, `CLERK_PUBLISHABLE_KEY`, and S3/Spaces credentials).
+Run the setup script to symlink the `.env` across workspaces:
 ```bash
 bash setup.sh
 ```
 
-Minimum required variables:
-
-```env
-DATABASE_URL=postgresql://postgres:postgres@localhost:5432/dev
-NODE_ENV=development
-BASE_URL=http://localhost:8000
-NEXT_PUBLIC_API_URL=http://localhost:8000
-```
-
-### 3. Start PostgreSQL (Docker)
-
+### 4. Start Local Infrastructure
+Use Docker Compose to spin up Postgres, Valkey (Redis), and Qdrant:
 ```bash
 docker-compose up -d
 ```
 
-This spins up a Postgres 15 container on port `5432`.
+### 5. Setup the Database
+Sync the Prisma schema to the database:
+```bash
+pnpm db:push
+```
 
-### 4. Run the dev servers
-
+### 6. Run the Application
+Start the Next.js frontend and Express/Worker backend in parallel via Turborepo:
 ```bash
 pnpm dev
 ```
 
-Turborepo starts all apps in parallel:
-
-| App | URL |
+| Service | Local URL |
 |---|---|
-| Next.js (web) | http://localhost:3000 |
-| Express API | http://localhost:8000 |
-| API docs (Scalar) | http://localhost:8000/docs |
-| OpenAPI JSON | http://localhost:8000/openapi.json |
-| tRPC endpoint | http://localhost:8000/trpc |
-| Drizzle Studio | run `pnpm db:studio` separately |
+| Next.js App | http://localhost:3000 |
+| Express API / TRPC | http://localhost:8000/trpc |
 
 ---
 
-## Scripts
+## 🛠 Useful Commands
 
-All scripts are run from the **repo root** using `pnpm <script>`.
-
-### `pnpm dev`
-Starts all apps and packages in watch/dev mode concurrently via Turborepo. Hot-reloads on file changes.
-
-### `pnpm build`
-Compiles all packages and apps for production. Order is resolved automatically by Turborepo's dependency graph (`^build` means "build my dependencies first").
-
-### `pnpm lint`
-Runs ESLint across all packages and apps.
-
-### `pnpm format`
-Runs Prettier across all `.ts`, `.tsx`, and `.md` files.
-
-### `pnpm check-types`
-Runs `tsc --noEmit` across all packages — no output files, just type verification.
-
-### `pnpm db:generate`
-Generates a new Drizzle migration based on your current `packages/database/schema.ts`. Run this after adding or changing table definitions.
-
-### `pnpm db:migrate`
-Applies all pending migrations to the database pointed to by `DATABASE_URL`.
-
----
-
-## How tRPC is wired
-
-```
-packages/trpc/server/
-  ├── trpc.ts          # initTRPC — creates router + procedures
-  ├── context.ts       # Request context (add auth, DB, etc. here)
-  ├── schema.ts        # Shared zod helpers (zodUndefinedModel, etc.)
-  ├── services/        # Instantiated service singletons for route use
-  ├── utils/           # path-generator helper for OpenAPI paths
-  └── routes/
-      └── health/      # Example route — GET /health
-
-packages/trpc/client/
-  └── index.ts         # Re-exports client utilities + typed RouterOutputs
-```
-
-The `serverRouter` from `packages/trpc/server` is consumed by both:
-- `apps/api` — mounts it on Express at `/trpc` and `/api` (OpenAPI)
-- `apps/web` — calls it via the tRPC React client
-
-### Adding a new route
-
-1. Create `packages/trpc/server/routes/<feature>/route.ts`
-2. Define a router using `publicProcedure` and `router` from `../../trpc`
-3. Register it in `packages/trpc/server/index.ts`
-
-```ts
-// packages/trpc/server/routes/posts/route.ts
-import { z } from "../../schema";
-import { publicProcedure, router } from "../../trpc";
-
-export const postsRouter = router({
-  list: publicProcedure
-    .meta({ openapi: { method: "GET", path: "/posts" } })
-    .input(z.undefined())
-    .output(z.array(z.object({ id: z.string(), title: z.string() })))
-    .query(async () => {
-      return []; // replace with DB call
-    }),
-});
-```
-
-```ts
-// packages/trpc/server/index.ts
-import { postsRouter } from "./routes/posts/route";
-
-export const serverRouter = router({
-  health: healthRouter,
-  posts: postsRouter, // add here
-});
-```
-
----
-
-## How the database is wired
-
-```
-packages/database/
-  ├── env.ts          # Validates DATABASE_URL
-  ├── index.ts        # Exports drizzle db instance
-  ├── schema.ts       # Re-exports all table definitions (empty scaffold)
-  ├── drizzle.config.ts # Drizzle Kit config
-  └── models/         # Create table files here (e.g., models/posts.ts)
-```
-
-### Adding a table
-
-1. Create `packages/database/models/posts.ts`
-2. Define the table with Drizzle's `pgTable`
-3. Export it from `packages/database/schema.ts`
-4. Run `pnpm db:generate` then `pnpm db:migrate`
-
-```ts
-// packages/database/models/posts.ts
-import { pgTable, uuid, varchar, timestamp } from "drizzle-orm/pg-core";
-
-export const postsTable = pgTable("posts", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  title: varchar("title", { length: 255 }).notNull(),
-  createdAt: timestamp("created_at").defaultNow(),
-});
-
-export type SelectPost = typeof postsTable.$inferSelect;
-export type InsertPost = typeof postsTable.$inferInsert;
-```
-
-```ts
-// packages/database/schema.ts
-export * from "./models/posts";
-```
-
----
-
-## Adding a new service
-
-Services live in `packages/services/` and contain business logic that routes call.
-
-1. Create `packages/services/<feature>/index.ts`
-2. Instantiate it in `packages/trpc/server/services/index.ts`
-3. Import and use it in your route
-
----
-
-## Environment variables reference
-
-| Variable | Required | Default | Description |
-|---|---|---|---|
-| `DATABASE_URL` | ✅ | — | PostgreSQL connection string |
-| `NODE_ENV` | — | `development` | `development` or `prod` |
-| `PORT` | — | `8000` | API server port |
-| `BASE_URL` | — | `http://localhost:8000` | Public base URL of API |
-| `NEXT_PUBLIC_API_URL` | — | `/trpc` (relative) | API URL used by the web client |
-| `LOGGER_LEVEL` | — | `debug` in dev | `error`, `info`, or `debug` |
-
----
-
-## Useful links
-
-- [Turborepo docs](https://turborepo.com/docs)
-- [tRPC docs](https://trpc.io/docs)
-- [Drizzle ORM docs](https://orm.drizzle.team)
-- [Next.js App Router docs](https://nextjs.org/docs/app)
-- [shadcn/ui components](https://ui.shadcn.com/docs/components)
-- [trpc-to-openapi](https://github.com/jlalmes/trpc-to-openapi)
+- `pnpm dev` - Start development servers
+- `pnpm build` - Build all packages and apps for production
+- `pnpm db:push` - Sync Prisma schema to database (development)
+- `pnpm db:generate` - Generate Prisma Client
+- `pnpm db:studio` - Open Prisma Studio to view the database

@@ -30,8 +30,8 @@ import { zodResponseFormat } from "openai/helpers/zod";
 import { detectPromptInjection } from "@repo/services/guardrails";
 
 const EvaluationSchema = z.object({
-  isWorthy: z.boolean().describe("True if this looks like a valid, useful codebase, dataset, or document repository worth embedding. False if it looks like empty junk, irrelevant structure, or completely useless files."),
-  reason: z.string().describe("A 1-sentence reason for why it is worthy or not."),
+  approved: z.boolean().describe("True if this looks like a valid, useful codebase, dataset, or document repository worth embedding. False if it looks like empty junk, irrelevant structure, or completely useless files."),
+  reasoning: z.string().describe("A 1-sentence reason for why it is worthy or not."),
   summary: z.string().describe("A concise 1-sentence summary of the repository contents.")
 });
 
@@ -77,19 +77,24 @@ export const extractWorker = new Worker<ExtractJobData>(
 
       } else if (source.type === "link") {
         // ── Webpage or YouTube link ──────────────────────────────────
-        // Timeout after 30s, max 10MB per spec
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 30_000);
-        try {
-          const res = await fetch(source.sourceUrl!, { signal: controller.signal });
-          if (!res.ok) throw new Error(`HTTP ${res.status} fetching ${source.sourceUrl}`);
-          const html = await res.text();
-          const text = sanitizeExtractedText(extractHtml(html, source.sourceUrl ?? undefined));
+        if (source.sourceUrl && (source.sourceUrl.includes("youtube.com") || source.sourceUrl.includes("youtu.be"))) {
+          const { extractYoutubeTranscript } = await import("@repo/services/ingestion/extract/youtube");
+          const text = sanitizeExtractedText(await extractYoutubeTranscript(source.sourceUrl));
           extractedData.push({ type: "text", text });
-        } finally {
-          clearTimeout(timeout);
+        } else {
+          // Timeout after 30s, max 10MB per spec
+          const controller = new AbortController();
+          const timeout = setTimeout(() => controller.abort(), 30_000);
+          try {
+            const res = await fetch(source.sourceUrl!, { signal: controller.signal });
+            if (!res.ok) throw new Error(`HTTP ${res.status} fetching ${source.sourceUrl}`);
+            const html = await res.text();
+            const text = sanitizeExtractedText(extractHtml(html, source.sourceUrl ?? undefined));
+            extractedData.push({ type: "text", text });
+          } finally {
+            clearTimeout(timeout);
+          }
         }
-
       } else if (source.type === "file" && source.storageKey) {
         // ── File download from DO Spaces ─────────────────────────────
         const fileName = source.fileName ?? `file-${randomUUID()}`;
@@ -117,6 +122,7 @@ export const extractWorker = new Worker<ExtractJobData>(
           // ── ZIP: extract files and route each to appropriate extractor ──
           const zipEntries = await extractZip(downloadPath, tempDir);
           const validFiles: string[] = [];
+          const failedFiles: { fileName: string; error: string }[] = [];
 
           for (const entry of zipEntries) {
             const ext = path.extname(entry.fileName).toLowerCase();
@@ -161,11 +167,13 @@ export const extractWorker = new Worker<ExtractJobData>(
                   ocrData,
                 );
               } else {
+                failedFiles.push({ fileName: entry.fileName, error: "Unsupported file type" });
                 logger.warn(
                   `[extract-worker] Skipping unsupported ZIP entry: ${entry.fileName}`,
                 );
               }
             } catch (entryErr) {
+              failedFiles.push({ fileName: entry.fileName, error: entryErr instanceof Error ? entryErr.message : String(entryErr) });
               logger.warn(
                 `[extract-worker] Failed to extract ZIP entry ${entry.fileName}:`,
                 { err: entryErr },
@@ -185,7 +193,7 @@ export const extractWorker = new Worker<ExtractJobData>(
               ...(env.OPENAI_API_BASE ? { baseURL: env.OPENAI_API_BASE } : {}),
             });
             const response = await openaiClient.chat.completions.create({
-              model: env.FAST_LLM_MODEL,
+              model: env.FAST_LLM_MODEL || "gpt-4o-mini", // Fallback if missing
               response_format: zodResponseFormat(EvaluationSchema, "evaluation"),
               messages: [{
                 role: "system",
@@ -203,20 +211,20 @@ export const extractWorker = new Worker<ExtractJobData>(
             
             const evaluation = JSON.parse(resultText) as z.infer<typeof EvaluationSchema>;
             
-            if (!evaluation.isWorthy) {
-              throw new Error(`Rejected by AI Evaluator: ${evaluation.reason}`);
-            }
-            
             await db.source.update({
               where: { id: sourceId },
               data: {
+                zipSummary: evaluation.summary,
+                zipApproved: evaluation.approved,
+                zipFailedFiles: failedFiles.length > 0 ? failedFiles : null,
                 metadata: {
                   fileTree: validFiles,
-                  summary: evaluation.summary
+                  summary: evaluation.summary,
+                  reasoning: evaluation.reasoning
                 }
               }
             });
-            logger.info(`[extract-worker] Evaluated ZIP for ${sourceId} as worthy: ${evaluation.reason}`);
+            logger.info(`[extract-worker] Evaluated ZIP for ${sourceId}, proceeding to chunk queue.`);
           } catch (llmErr) {
             // Rethrow so the outer catch block marks the job as failed with this specific message
             logger.warn(`[extract-worker] ZIP evaluation failed or rejected`, { err: llmErr });

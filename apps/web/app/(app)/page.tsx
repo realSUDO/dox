@@ -1,5 +1,7 @@
 "use client";
 
+import { UserButton } from "@clerk/nextjs";
+
 import { useState } from "react";
 import { trpc } from "~/trpc/client";
 import Link from "next/link";
@@ -84,9 +86,7 @@ export default function DashboardPage() {
 
         <div className="p-4 border-t border-[#EBEBEB]">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-[#144637] flex items-center justify-center text-white text-sm font-medium">
-              U
-            </div>
+            <UserButton afterSignOutUrl="/" />
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium truncate">My Workspace</p>
               <p className="text-xs text-[#6B6B6B] truncate">Free Plan</p>
