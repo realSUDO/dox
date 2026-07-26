@@ -42,6 +42,22 @@ export class SpacesService {
     return url;
   }
 
+  async createPresignedGetUrl(key: string, expiresIn: number = 3600, contentType?: string) {
+    if (!this.client) {
+      return `http://mock-spaces.local/download?key=${encodeURIComponent(key)}`;
+    }
+
+    const command = new GetObjectCommand({
+      Bucket: this.bucket,
+      Key: key,
+      ResponseContentDisposition: "inline",
+      ...(contentType ? { ResponseContentType: contentType } : {}),
+    });
+
+    const url = await getSignedUrl(this.client, command, { expiresIn });
+    return url;
+  }
+
   async downloadFile(key: string, downloadPath: string) {
     if (!this.client) {
       throw new Error("S3 Client not configured");

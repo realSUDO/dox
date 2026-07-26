@@ -123,11 +123,18 @@ export class QdrantService {
       mustConditions.push({ key: "indexVersion", range: { lt: filter.indexVersionLt } });
     }
 
-    await this.request("POST", `/collections/${name}/points/delete?wait=true`, {
-      filter: { must: mustConditions },
-    });
-
-    logger.info(`[QdrantService] Deleted points for sourceId=${filter.sourceId}`);
+    try {
+      await this.request("POST", `/collections/${name}/points/delete?wait=true`, {
+        filter: { must: mustConditions },
+      });
+      logger.info(`[QdrantService] Deleted points for sourceId=${filter.sourceId}`);
+    } catch (err: any) {
+      if (err.message && err.message.includes("404 Not Found") && err.message.includes("doesn't exist")) {
+        logger.debug(`[QdrantService] Collection ${name} doesn't exist, skipping delete`);
+        return;
+      }
+      throw err;
+    }
   }
 
   /**
@@ -143,12 +150,18 @@ export class QdrantService {
       mustConditions.push({ key: "indexVersion", match: { value: filter.indexVersion } });
     }
 
-    const result = await this.request("POST", `/collections/${name}/points/count`, {
-      filter: { must: mustConditions },
-      exact: true,
-    });
-
-    return result.result.count;
+    try {
+      const result = await this.request("POST", `/collections/${name}/points/count`, {
+        filter: { must: mustConditions },
+        exact: true,
+      });
+      return result.result.count;
+    } catch (err: any) {
+      if (err.message && err.message.includes("404 Not Found") && err.message.includes("doesn't exist")) {
+        return 0;
+      }
+      throw err;
+    }
   }
 
   /**
@@ -165,14 +178,20 @@ export class QdrantService {
   ): Promise<QdrantPoint[]> {
     const name = collectionName(leafId);
     
-    const result = await this.request("POST", `/collections/${name}/points/search`, {
-      vector: params.vector,
-      filter: params.filter,
-      limit: params.limit || 20,
-      with_payload: params.with_payload ?? true,
-    });
-
-    return result.result;
+    try {
+      const result = await this.request("POST", `/collections/${name}/points/search`, {
+        vector: params.vector,
+        filter: params.filter,
+        limit: params.limit || 20,
+        with_payload: params.with_payload ?? true,
+      });
+      return result.result;
+    } catch (err: any) {
+      if (err.message && err.message.includes("404 Not Found") && err.message.includes("doesn't exist")) {
+        return [];
+      }
+      throw err;
+    }
   }
 
   /**

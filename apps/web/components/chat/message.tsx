@@ -49,25 +49,29 @@ export function ChatMessage({ role, content, citations = [] }: MessageProps) {
   };
 
   return (
-    <div
-      className={cn(
-        "flex w-full px-4 py-6 text-sm",
-        isUser ? "bg-background" : "bg-muted/50"
-      )}
-    >
-      <div className="mx-auto flex w-full max-w-3xl items-start gap-4">
-        <div
+    <div className="flex w-full px-4 py-4 text-sm">
+      <div className={cn(
+        "mx-auto flex w-full max-w-3xl items-end gap-3",
+        isUser ? "flex-row-reverse" : "flex-row"
+      )}>
+        {!isUser && (
+          <div className="flex shrink-0 items-center justify-center pb-2">
+            <img src="/dox.svg" alt="Dox AI" className="h-7 w-7" />
+          </div>
+        )}
+
+        <div 
           className={cn(
-            "flex h-8 w-8 shrink-0 items-center justify-center rounded-md border shadow-sm",
-            isUser ? "bg-primary text-primary-foreground" : "bg-card text-card-foreground"
+            "flex flex-col max-w-[85%] rounded-3xl px-5 py-4",
+            isUser 
+              ? "bg-[#144637] text-white rounded-br-sm" 
+              : "bg-white border border-[#EBEBEB] shadow-sm rounded-bl-sm"
           )}
         >
-          {isUser ? <User className="h-5 w-5" /> : <Bot className="h-5 w-5" />}
-        </div>
-        
-        <div className="flex-1 space-y-2 overflow-hidden px-1">
-          <div className="font-semibold">{isUser ? "You" : "Assistant"}</div>
-          <div className="prose prose-sm dark:prose-invert max-w-none break-words leading-relaxed">
+          <div className={cn(
+            "prose prose-sm max-w-none break-words leading-relaxed",
+            isUser ? "text-white prose-invert" : "text-[#1b1b1d]"
+          )}>
             {renderContent()}
           </div>
         </div>

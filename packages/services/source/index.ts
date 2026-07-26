@@ -6,6 +6,8 @@ import { projectService } from "../leaf";
 import { z } from "zod";
 import crypto from "node:crypto";
 import { env } from "../env";
+import OpenAI from "openai";
+import { logger } from "@repo/logger";
 
 export const uploadSourceSchema = z.object({
   leafId: z.string().uuid(),

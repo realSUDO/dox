@@ -4,8 +4,10 @@ import {
   uploadSourceSchema,
   addLinkSchema,
   addTextSchema,
+  spacesService,
 } from "@repo/services";
 import { z } from "zod";
+import { TRPCError } from "@trpc/server";
 
 const sourceSchema = z.object({
   id: z.string().uuid(),
@@ -113,5 +115,22 @@ export const sourcesRouter = router({
     .output(z.object({ sourceId: z.string().uuid(), status: z.string(), batches: z.number().optional() }))
     .mutation(async ({ input, ctx }) => {
       return sourceService.approveSource(ctx.user.id, input.sourceId);
+    }),
+
+  getDownloadUrl: protectedProcedure
+    .meta({ openapi: { method: "GET", path: "/sources/{sourceId}/download" } })
+    .input(z.object({ sourceId: z.string().uuid() }))
+    .output(z.object({ url: z.string() }))
+    .query(async ({ input, ctx }) => {
+      const source = await sourceService.getSource(ctx.user.id, input.sourceId);
+      if (!source.storageKey) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Source has no storage key" });
+      }
+      const url = await spacesService.createPresignedGetUrl(
+        source.storageKey, 
+        3600, 
+        source.mimeType ?? undefined
+      );
+      return { url };
     }),
 });

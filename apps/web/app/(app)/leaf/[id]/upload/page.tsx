@@ -21,13 +21,28 @@ export default function KnowledgeBasePage({ params }: { params: Promise<{ id: st
   const [unifiedInput, setUnifiedInput] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Preview States
   const [previewSource, setPreviewSource] = useState<any>(null);
 
+  const { data: downloadData, isLoading: isDownloadLoading, error: downloadError } = trpc.sources.getDownloadUrl.useQuery(
+    { sourceId: previewSource?.id as string },
+    { enabled: !!previewSource && (previewSource.mimeType === "application/pdf" || previewSource.mimeType?.startsWith("image/")) }
+  );
+
   // Queries
-  const { data: sources, isLoading: isSourcesLoading } = trpc.sources.listSources.useQuery({ leafId });
+  const { data: sources, isLoading: isSourcesLoading } = trpc.sources.listSources.useQuery(
+    { leafId },
+    { 
+      refetchInterval: (query) => {
+        // Only poll if there are items processing, pending approval, or extracting
+        const hasActive = query.state.data?.some(s => ['processing', 'pending_approval', 'extracting'].includes(s.status));
+        return hasActive ? 3000 : false;
+      }
+    }
+  );
 
   // Mutations
   const addTextMutation = trpc.sources.addText.useMutation({
@@ -54,6 +69,14 @@ export default function KnowledgeBasePage({ params }: { params: Promise<{ id: st
       utils.sources.listSources.invalidate();
     },
     onError: (err) => toast.error(err.message || "Failed to delete"),
+  });
+
+  const approveMutation = trpc.sources.approveSource.useMutation({
+    onSuccess: () => {
+      toast.success("Source approved! Embedding started.");
+      utils.sources.listSources.invalidate();
+    },
+    onError: (err) => toast.error(err.message || "Failed to approve"),
   });
 
   const getUploadUrlMutation = trpc.sources.requestUploadUrl.useMutation();
@@ -85,6 +108,35 @@ export default function KnowledgeBasePage({ params }: { params: Promise<{ id: st
       const selectedFile = e.target.files[0];
       setFile(selectedFile);
       handleUploadFile(selectedFile);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!isUploading) {
+      setIsDragging(true);
+    }
+  };
+
+  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    
+    if (isUploading) return;
+
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      const selectedFile = e.dataTransfer.files[0];
+      setFile(selectedFile);
+      handleUploadFile(selectedFile);
+      e.dataTransfer.clearData();
     }
   };
 
@@ -164,9 +216,14 @@ export default function KnowledgeBasePage({ params }: { params: Promise<{ id: st
               {/* Drag and Drop */}
               <div 
                 className={`border-2 border-dashed rounded-xl p-10 text-center transition-colors cursor-pointer ${
-                  isUploading ? "border-[#144637]/30 bg-[#f0edef]/50" : "border-[#c0c9c3] hover:bg-[#f0edef]/50 hover:border-[#144637]/50"
+                  isUploading ? "border-[#144637]/30 bg-[#f0edef]/50" 
+                  : isDragging ? "border-[#144637] bg-[#144637]/5 scale-[1.02] transform transition-transform" 
+                  : "border-[#c0c9c3] hover:bg-[#f0edef]/50 hover:border-[#144637]/50"
                 }`}
                 onClick={() => !isUploading && fileInputRef.current?.click()}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
               >
                 {isUploading ? (
                   <div className="flex flex-col items-center">
@@ -251,14 +308,31 @@ export default function KnowledgeBasePage({ params }: { params: Promise<{ id: st
                           )}
                           <span>• {new Date(source.createdAt).toLocaleDateString()}</span>
                           <span className="flex items-center gap-1">
-                            • <span className={`w-1.5 h-1.5 rounded-full ${source.status === 'indexed' ? 'bg-green-500' : 'bg-yellow-500'}`}></span>
-                            {source.status === 'indexed' ? 'Indexed' : 'Processing'}
+                            • <span className={`w-1.5 h-1.5 rounded-full ${source.status === 'indexed' ? 'bg-green-500' : source.status === 'pending_approval' ? 'bg-blue-500 animate-pulse' : source.status === 'failed' ? 'bg-red-500' : 'bg-yellow-500'}`}></span>
+                            {source.status === 'indexed' ? 'Indexed' : source.status === 'pending_approval' ? 'Pending Approval' : source.status === 'failed' ? 'Failed' : 'Processing'}
                           </span>
                         </div>
+                        {source.status === 'failed' && source.lastError && (
+                          <div className="mt-2 text-xs text-red-600 bg-red-50 p-2 rounded border border-red-100 line-clamp-2" title={source.lastError}>
+                            <span className="font-semibold">Error:</span> {source.lastError}
+                          </div>
+                        )}
                       </div>
                     </div>
                     
                     <div className="flex items-center gap-2 pl-4">
+                      {source.status === 'pending_approval' && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="text-[#144637] border-[#144637] hover:bg-[#144637] hover:text-white h-8 px-3 transition-colors"
+                          onClick={() => approveMutation.mutate({ sourceId: source.id })}
+                          disabled={approveMutation.isPending}
+                        >
+                          Approve
+                        </Button>
+                      )}
+                      
                       <Button 
                         variant="ghost" 
                         size="sm" 
@@ -324,9 +398,63 @@ export default function KnowledgeBasePage({ params }: { params: Promise<{ id: st
                 </div>
               )}
               
-              <div className="p-4 bg-gray-50 rounded-lg border border-[#EBEBEB] whitespace-pre-wrap font-mono text-xs overflow-x-auto">
-                {previewSource?.textContent || "No text content available for preview yet. It may still be processing."}
-              </div>
+              {previewSource?.mimeType === 'application/pdf' ? (
+                isDownloadLoading ? (
+                  <div className="flex justify-center p-12"><Loader2 className="animate-spin text-[#144637] w-8 h-8 opacity-50" /></div>
+                ) : downloadData?.url ? (
+                  <object 
+                    data={downloadData.url} 
+                    type="application/pdf" 
+                    className="w-full h-[600px] border-none rounded-lg"
+                  >
+                    <p>Your browser does not support PDFs. <a href={downloadData.url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">Download the PDF</a>.</p>
+                  </object>
+                ) : (
+                  <div className="p-4 bg-red-50 text-red-600 rounded-lg border border-red-200">
+                    Failed to load PDF preview. {downloadError?.message}
+                  </div>
+                )
+              ) : previewSource?.mimeType?.startsWith('image/') ? (
+                isDownloadLoading ? (
+                  <div className="flex justify-center p-12"><Loader2 className="animate-spin text-[#144637] w-8 h-8 opacity-50" /></div>
+                ) : downloadData?.url ? (
+                  <div className="flex justify-center bg-gray-50 p-4 rounded-lg border border-[#EBEBEB]">
+                    <img src={downloadData.url} alt="Preview" className="max-w-full h-auto max-h-[600px] rounded object-contain" />
+                  </div>
+                ) : (
+                  <div className="p-4 bg-red-50 text-red-600 rounded-lg border border-red-200">
+                    Failed to load image preview. {downloadError?.message}
+                  </div>
+                )
+              ) : previewSource?.mimeType === 'application/zip' ? (
+                <div className="space-y-4">
+                  {previewSource.metadata?.summary ? (
+                    <div className="p-4 bg-[#f0edef] rounded-lg border border-[#c0c9c3]">
+                      <h3 className="font-semibold text-[#144637] mb-2 flex items-center gap-2">
+                        <FileArchive size={18} /> Repository Summary
+                      </h3>
+                      <p className="text-[#1b1b1d] leading-relaxed">{previewSource.metadata.summary}</p>
+                    </div>
+                  ) : (
+                    <div className="p-4 bg-yellow-50 text-yellow-800 rounded-lg border border-yellow-200 text-sm">
+                      Summary will be generated once this repository is approved for embedding.
+                    </div>
+                  )}
+
+                  {previewSource.metadata?.fileTree && Array.isArray(previewSource.metadata.fileTree) && (
+                    <div className="p-4 bg-gray-50 rounded-lg border border-[#EBEBEB]">
+                      <h4 className="font-medium text-[#404945] mb-3">Extracted Files ({previewSource.metadata.fileTree.length})</h4>
+                      <pre className="whitespace-pre-wrap font-mono text-xs overflow-x-auto text-[#1b1b1d] max-h-[400px] overflow-y-auto">
+                        {previewSource.metadata.fileTree.join('\n')}
+                      </pre>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="p-4 bg-gray-50 rounded-lg border border-[#EBEBEB] whitespace-pre-wrap font-mono text-xs overflow-x-auto">
+                  {previewSource?.textContent || "No text content available for preview yet. It may still be processing."}
+                </div>
+              )}
             </div>
           </ScrollArea>
         </SheetContent>

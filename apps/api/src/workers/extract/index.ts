@@ -25,7 +25,15 @@ import type {
   ChunkJobData,
   OcrJobData,
 } from "@repo/services/queues";
+import { z } from "zod";
+import { zodResponseFormat } from "openai/helpers/zod";
 import { detectPromptInjection } from "@repo/services/guardrails";
+
+const EvaluationSchema = z.object({
+  isWorthy: z.boolean().describe("True if this looks like a valid, useful codebase, dataset, or document repository worth embedding. False if it looks like empty junk, irrelevant structure, or completely useless files."),
+  reason: z.string().describe("A 1-sentence reason for why it is worthy or not."),
+  summary: z.string().describe("A concise 1-sentence summary of the repository contents.")
+});
 
 // Helper to sanitize extracted text for indirect injection
 function sanitizeExtractedText(text: string): string {
@@ -170,7 +178,7 @@ export const extractWorker = new Worker<ExtractJobData>(
             throw new Error("No valid extractable files found in ZIP archive.");
           }
 
-          // Generate LLM summary of the ZIP structure
+          // Generate LLM evaluation of the ZIP structure
           try {
             const openaiClient = new OpenAI({
               apiKey: env.OPENAI_API_KEY,
@@ -178,28 +186,41 @@ export const extractWorker = new Worker<ExtractJobData>(
             });
             const response = await openaiClient.chat.completions.create({
               model: env.FAST_LLM_MODEL,
+              response_format: zodResponseFormat(EvaluationSchema, "evaluation"),
               messages: [{
                 role: "system",
-                content: "You are an expert software architect. Analyze the provided directory tree of an uploaded repository/ZIP. Write a concise 1-sentence summary explaining what this codebase or leaf is likely about based on its folders and file names."
+                content: "You are an expert software architect. Analyze the provided directory tree of an uploaded repository/ZIP. Determine if it is a valid, useful codebase or document set worth embedding, or if it is useless junk. Provide your reasoning and a concise 1-sentence summary."
               }, {
                 role: "user",
                 content: validFiles.join("\n")
               }]
             });
-            const summary = response.choices[0]?.message?.content || null;
+            
+            const resultText = response.choices[0]?.message?.content;
+            if (!resultText) {
+              throw new Error("Failed to get evaluation from AI.");
+            }
+            
+            const evaluation = JSON.parse(resultText) as z.infer<typeof EvaluationSchema>;
+            
+            if (!evaluation.isWorthy) {
+              throw new Error(`Rejected by AI Evaluator: ${evaluation.reason}`);
+            }
             
             await db.source.update({
               where: { id: sourceId },
               data: {
                 metadata: {
                   fileTree: validFiles,
-                  summary
+                  summary: evaluation.summary
                 }
               }
             });
-            logger.info(`[extract-worker] Generated ZIP summary for ${sourceId}`);
+            logger.info(`[extract-worker] Evaluated ZIP for ${sourceId} as worthy: ${evaluation.reason}`);
           } catch (llmErr) {
-            logger.warn(`[extract-worker] Failed to generate ZIP summary`, { err: llmErr });
+            // Rethrow so the outer catch block marks the job as failed with this specific message
+            logger.warn(`[extract-worker] ZIP evaluation failed or rejected`, { err: llmErr });
+            throw llmErr;
           }
 
         } else if (mimeType.startsWith("image/")) {
