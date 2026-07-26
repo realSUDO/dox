@@ -1,0 +1,67 @@
+--- apps/web/app/globals.css
++++ apps/web/app/globals.css
+@@ -90,48 +90,46 @@
+ }
+ 
+-:root, .dark {
++:root {
+   --radius: 0.625rem;
+   
+-  /* Hardcoded Mockup Colors that apply to both light and dark modes to prevent clashing */
+-  --background: #fcf8fb;
++  --background: #fbfbfa;
+   --foreground: #1b1b1d;
+-  
+   --card: #ffffff;
+   --card-foreground: #1b1b1d;
+-  
+   --popover: #ffffff;
+   --popover-foreground: #1b1b1d;
+-  
+   --primary: #144637;
+   --primary-foreground: #ffffff;
+-  
+-  --secondary: #396751;
+-  --secondary-foreground: #ffffff;
+-  
+-  --muted: #e4e2e4;
+-  --muted-foreground: #404945;
+-  
+-  --accent: #eae7ea;
++  --secondary: #f0edef;
++  --secondary-foreground: #144637;
++  --muted: #f3f3f3;
++  --muted-foreground: #6b6b6b;
++  --accent: #ebebeb;
+   --accent-foreground: #1b1b1d;
+-  
+   --destructive: #ba1a1a;
+   --destructive-foreground: #ffffff;
+-  
+-  --border: #c0c9c3;
+-  --input: #c0c9c3;
+-  --ring: #396751;
++}
++
++.dark {
++  --radius: 0.625rem;
++  --background: #111111;
++  --foreground: #f0f0f0;
++  --card: #181818;
++  --card-foreground: #f0f0f0;
++  --popover: #181818;
++  --popover-foreground: #f0f0f0;
++  --primary: #2ea380;
++  --primary-foreground: #ffffff;
++  --secondary: #1f1f1f;
++  --secondary-foreground: #2ea380;
++  --muted: #262626;
++  --muted-foreground: #a3a3a3;
++  --accent: #333333;
++  --accent-foreground: #f0f0f0;
++  --destructive: #ff5252;
++  --destructive-foreground: #ffffff;
++  --border: #333333;
++  --input: #333333;
++  --ring: #2ea380;
++}

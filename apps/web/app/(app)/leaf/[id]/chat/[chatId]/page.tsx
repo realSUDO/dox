@@ -239,9 +239,9 @@ export default function ChatSessionPage({ params }: { params: Promise<{ id: stri
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="absolute inset-0 z-50 bg-[#fcf8fb]/90 backdrop-blur-sm flex items-center justify-center border-4 border-dashed border-[#144637] rounded-xl m-4"
+            className="absolute inset-0 z-50 bg-background/90 backdrop-blur-sm flex items-center justify-center border-4 border-dashed border-[#144637] rounded-xl m-4"
           >
-            <div className="flex flex-col items-center justify-center text-[#144637]">
+            <div className="flex flex-col items-center justify-center text-primary">
               <UploadCloud size={64} className="mb-4" />
               <h2 className="text-2xl font-bold font-['Geist',sans-serif]">Drop files to add to Knowledge Base</h2>
               <p className="text-lg opacity-80 mt-2">Supports PDF, Text, and Images</p>
@@ -251,7 +251,7 @@ export default function ChatSessionPage({ params }: { params: Promise<{ id: stri
       </AnimatePresence>
       <div className="flex-1 overflow-y-auto pb-40 w-full">
         {isSessionLoading ? (
-          <div className="h-full flex flex-col items-center justify-center w-full text-[#404945]">
+          <div className="h-full flex flex-col items-center justify-center w-full text-muted-foreground">
             <Loader2 className="w-8 h-8 animate-spin mb-4" />
             <p>Loading chat history...</p>
           </div>
@@ -268,12 +268,12 @@ export default function ChatSessionPage({ params }: { params: Promise<{ id: stri
             {queryMutation.isPending && (
               <div className="flex w-full px-4 py-6 text-sm">
                 <div className="flex w-full items-start gap-4">
-                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-[#c0c9c3] bg-white">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-border bg-card">
                     <img src="/dox.svg" alt="Dox AI" className="h-6 w-6 animate-pulse" />
                   </div>
                   <div className="flex-1 space-y-2 px-1">
-                    <div className="font-semibold text-[#1b1b1d]">Dox Assistant</div>
-                    <div className="text-[#404945]">Synthesizing information...</div>
+                    <div className="font-semibold text-foreground">Dox Assistant</div>
+                    <div className="text-muted-foreground">Synthesizing information...</div>
                   </div>
                 </div>
               </div>
@@ -297,11 +297,11 @@ export default function ChatSessionPage({ params }: { params: Promise<{ id: stri
                 exit={{ opacity: 0, scale: 0.9 }}
                 className={`flex items-center gap-2 border rounded-[16px] pl-3 pr-2 py-1.5 shadow-sm text-sm transition-colors ${
                   file.status === 'pending_approval' 
-                    ? "bg-[#E8F3F0] border-[#144637]/30 text-[#144637]" 
-                    : "bg-white border-[#c0c9c3] text-[#1b1b1d]"
+                    ? "bg-primary/10 border-primary/30 text-primary" 
+                    : "bg-card border-border text-foreground"
                 }`}
               >
-                {(file.status === 'uploading' || file.status === 'processing') && <Loader2 size={16} className="animate-spin text-[#144637] shrink-0" />}
+                {(file.status === 'uploading' || file.status === 'processing') && <Loader2 size={16} className="animate-spin text-primary shrink-0" />}
                 {file.status === 'pending_approval' && <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse shrink-0" />}
                 {file.status === 'success' && <CheckCircle2 size={16} className="text-green-600 shrink-0" />}
                 {file.status === 'error' && <X size={16} className="text-red-500 shrink-0" />}
@@ -325,7 +325,7 @@ export default function ChatSessionPage({ params }: { params: Promise<{ id: stri
                       });
                     }}
                     disabled={approveMutation.isPending}
-                    className="bg-[#144637] hover:bg-[#0F3529] text-white rounded-full py-1 px-3 transition-all flex items-center gap-1.5 shrink-0 ml-2 shadow-sm hover:shadow-md"
+                    className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-full py-1 px-3 transition-all flex items-center gap-1.5 shrink-0 ml-2 shadow-sm hover:shadow-md"
                   >
                     <span className="text-xs font-semibold tracking-wide uppercase">Approve</span>
                   </button>
@@ -343,29 +343,29 @@ export default function ChatSessionPage({ params }: { params: Promise<{ id: stri
               animate={{ opacity: 1, height: 'auto', marginBottom: 8 }}
               exit={{ opacity: 0, height: 0, marginBottom: 0 }}
               onSubmit={handleAddInlineLink}
-              className="w-full bg-[#fcf8fb]/95 backdrop-blur-md border-2 border-dashed border-[#c0c9c3] rounded-[24px] flex items-center p-2 overflow-hidden shadow-lg"
+              className="w-full bg-background/95 backdrop-blur-md border-2 border-dashed border-border rounded-[24px] flex items-center p-2 overflow-hidden shadow-lg"
             >
-              <LinkIcon className="text-[#404945] opacity-50 ml-2 shrink-0" size={18} />
+              <LinkIcon className="text-muted-foreground opacity-50 ml-2 shrink-0" size={18} />
               <input
                 type="url"
                 autoFocus
                 value={inlineLinkUrl}
                 onChange={(e) => setInlineLinkUrl(e.target.value)}
                 placeholder="https://example.com/article"
-                className="flex-1 bg-transparent border-none focus:ring-0 text-sm text-[#1b1b1d] px-3 py-2 outline-none"
+                className="flex-1 bg-transparent border-none focus:ring-0 text-sm text-foreground px-3 py-2 outline-none"
                 disabled={addLinkMutation.isPending}
               />
               <button 
                 type="submit"
                 disabled={!inlineLinkUrl.trim() || addLinkMutation.isPending}
-                className="px-4 py-2 bg-[#144637] text-white rounded-full text-sm font-medium hover:opacity-90 disabled:opacity-50 transition-all shrink-0 flex items-center gap-2"
+                className="px-4 py-2 bg-primary text-primary-foreground rounded-full text-sm font-medium hover:opacity-90 disabled:opacity-50 transition-all shrink-0 flex items-center gap-2"
               >
                 {addLinkMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : "Add"}
               </button>
               <button
                 type="button"
                 onClick={() => setShowLinkInput(false)}
-                className="p-2 text-[#404945] hover:bg-[#e4e2e4] rounded-full ml-1 shrink-0 transition-all"
+                className="p-2 text-muted-foreground hover:bg-accent rounded-full ml-1 shrink-0 transition-all"
               >
                 <X size={16} />
               </button>
@@ -375,7 +375,7 @@ export default function ChatSessionPage({ params }: { params: Promise<{ id: stri
 
         <motion.div 
           layout
-          className="w-full bg-[#fcf8fb]/80 backdrop-blur-md border border-[#c0c9c3] rounded-[32px] shadow-lg p-2 flex items-end gap-2"
+          className="w-full bg-background/80 backdrop-blur-md border border-border rounded-[32px] shadow-lg p-2 flex items-end gap-2"
         >
           <div className="flex items-center gap-1 pb-1 pl-1 flex-none">
             <input 
@@ -388,7 +388,7 @@ export default function ChatSessionPage({ params }: { params: Promise<{ id: stri
             <button
               onClick={() => fileInputRef.current?.click()}
               type="button"
-              className="h-10 w-10 flex items-center justify-center text-[#404945] hover:bg-[#e4e2e4] rounded-full transition-all flex-none"
+              className="h-10 w-10 flex items-center justify-center text-muted-foreground hover:bg-accent rounded-full transition-all flex-none"
               title="Add to Knowledge Base"
             >
               <FileUp size={20} />
@@ -396,7 +396,7 @@ export default function ChatSessionPage({ params }: { params: Promise<{ id: stri
             <button
               onClick={() => setShowLinkInput(!showLinkInput)}
               type="button"
-              className="h-10 w-10 flex items-center justify-center text-[#404945] hover:bg-[#e4e2e4] rounded-full transition-all flex-none"
+              className="h-10 w-10 flex items-center justify-center text-muted-foreground hover:bg-accent rounded-full transition-all flex-none"
               title="Add Link"
             >
               <LinkIcon size={20} />
@@ -405,7 +405,7 @@ export default function ChatSessionPage({ params }: { params: Promise<{ id: stri
           
           <motion.textarea
             layout
-            className="flex-1 bg-transparent border-none focus:ring-0 font-['Inter',sans-serif] text-base text-[#1b1b1d] placeholder:text-[#404945]/50 py-3 px-2 outline-none resize-none min-h-[44px] max-h-[200px]"
+            className="flex-1 bg-transparent border-none focus:ring-0 font-['Inter',sans-serif] text-base text-foreground placeholder:text-muted-foreground/50 py-3 px-2 outline-none resize-none min-h-[44px] max-h-[200px]"
             placeholder="Reply in conversation..."
             value={input}
             onChange={(e) => {
@@ -421,7 +421,7 @@ export default function ChatSessionPage({ params }: { params: Promise<{ id: stri
             <button
               onClick={handleSend}
               disabled={!input.trim() || queryMutation.isPending}
-              className="h-10 w-10 flex items-center justify-center bg-[#144637] text-white rounded-full hover:opacity-90 scale-100 active:scale-95 transition-transform disabled:opacity-50 flex-none"
+              className="h-10 w-10 flex items-center justify-center bg-primary text-primary-foreground rounded-full hover:opacity-90 scale-100 active:scale-95 transition-transform disabled:opacity-50 flex-none"
               title="Send"
             >
               {queryMutation.isPending ? (

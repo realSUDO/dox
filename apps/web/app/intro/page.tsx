@@ -77,7 +77,7 @@ const iconVariants = {
 
 export default function IntroPage() {
   return (
-    <div className="min-h-screen bg-[#FBFBFA] text-[#1B1B1D] font-['Inter',sans-serif] overflow-hidden selection:bg-[#144637] selection:text-white">
+    <div className="min-h-screen bg-background text-foreground font-['Inter',sans-serif] overflow-hidden selection:bg-primary selection:text-primary-foreground">
       {/* Navigation */}
       <motion.nav 
         initial={{ opacity: 0, y: -20 }}
@@ -97,12 +97,12 @@ export default function IntroPage() {
         </div>
         <div>
           <SignInButton forceRedirectUrl="/">
-            <Button variant="ghost" className="font-medium hover:bg-[#EBEBEB] text-[#1B1B1D] mr-2">
+            <Button variant="ghost" className="font-medium hover:bg-accent text-foreground mr-2">
               Log in
             </Button>
           </SignInButton>
           <SignUpButton forceRedirectUrl="/">
-            <Button className="bg-[#144637] hover:bg-[#0F3529] text-white shadow-sm font-medium">
+            <Button className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm font-medium">
               Get Started
             </Button>
           </SignUpButton>
@@ -118,7 +118,7 @@ export default function IntroPage() {
           className="text-center max-w-3xl w-full relative z-10"
         >
           <motion.div variants={itemVariants} className="mb-6 flex justify-center">
-            <span className="px-4 py-1.5 rounded-full bg-white border border-[#EBEBEB] text-xs font-semibold text-[#144637] tracking-wider uppercase shadow-sm flex items-center gap-2">
+            <span className="px-4 py-1.5 rounded-full bg-card border border-border text-xs font-semibold text-primary tracking-wider uppercase shadow-sm flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
               Welcome to the future of context
             </span>
@@ -126,15 +126,15 @@ export default function IntroPage() {
 
           <motion.h1 
             variants={itemVariants}
-            className="text-6xl md:text-7xl font-bold tracking-tight text-[#1B1B1D] leading-[1.1] mb-8"
+            className="text-6xl md:text-7xl font-bold tracking-tight text-foreground leading-[1.1] mb-8"
           >
-            Your ultimate <span className="text-[#144637] relative inline-block">
+            Your ultimate <span className="text-primary relative inline-block">
               knowledge
               <motion.svg
                 initial={{ pathLength: 0, opacity: 0 }}
                 animate={{ pathLength: 1, opacity: 1 }}
                 transition={{ duration: 1.5, delay: 0.8, ease: "easeInOut" }}
-                className="absolute w-full h-3 -bottom-2 left-0 text-[#144637]/30"
+                className="absolute w-full h-3 -bottom-2 left-0 text-primary/30"
                 viewBox="0 0 100 10"
                 preserveAspectRatio="none"
               >
@@ -145,14 +145,14 @@ export default function IntroPage() {
 
           <motion.p 
             variants={itemVariants}
-            className="text-xl md:text-2xl text-[#6B6B6B] mb-12 leading-relaxed max-w-2xl mx-auto font-light"
+            className="text-xl md:text-2xl text-muted-foreground mb-12 leading-relaxed max-w-2xl mx-auto font-light"
           >
             Seamlessly connect your documents, research notes, and creative thoughts. Build an intelligent graph of everything that matters.
           </motion.p>
 
           <motion.div variants={itemVariants} className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <SignUpButton forceRedirectUrl="/">
-              <Button size="lg" className="bg-[#144637] hover:bg-[#0F3529] text-white h-14 px-8 text-lg rounded-xl shadow-lg hover:shadow-xl transition-all group">
+              <Button size="lg" className="bg-primary hover:bg-primary/90 text-primary-foreground h-14 px-8 text-lg rounded-xl shadow-lg hover:shadow-xl transition-all group">
                 Start Building Free
                 <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
               </Button>
@@ -167,13 +167,13 @@ export default function IntroPage() {
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 2, ease: "easeOut" }}
-            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] border border-[#144637]/5 rounded-full"
+            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] border border-primary/5 rounded-full"
           />
           <motion.div 
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 2.5, ease: "easeOut", delay: 0.2 }}
-            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[1200px] h-[1200px] border border-[#144637]/5 rounded-full"
+            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[1200px] h-[1200px] border border-primary/5 rounded-full"
           />
 
           {/* Floating Icons */}
@@ -181,7 +181,7 @@ export default function IntroPage() {
             variants={iconVariants}
             initial="hidden"
             animate="visible"
-            className="absolute top-[20%] left-[15%] w-16 h-16 bg-white shadow-xl border border-[#EBEBEB] rounded-2xl flex items-center justify-center text-[#144637]"
+            className="absolute top-[20%] left-[15%] w-16 h-16 bg-card shadow-xl border border-border rounded-2xl flex items-center justify-center text-primary"
             style={{ y: typeof window !== 'undefined' ? 0 : 0 }} // Simple way to ensure hydration matches
           >
             <motion.div animate={{ y: [0, -10, 0] }} transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}>
@@ -193,7 +193,7 @@ export default function IntroPage() {
             variants={iconVariants}
             initial="hidden"
             animate="visible"
-            className="absolute top-[30%] right-[15%] w-20 h-20 bg-[#144637] shadow-xl shadow-[#144637]/20 rounded-2xl flex items-center justify-center text-white"
+            className="absolute top-[30%] right-[15%] w-20 h-20 bg-primary shadow-xl shadow-primary/20 rounded-2xl flex items-center justify-center text-primary-foreground"
           >
             <motion.div animate={{ y: [0, 15, 0] }} transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 1 }}>
               <CustomNetwork />
@@ -204,7 +204,7 @@ export default function IntroPage() {
             variants={iconVariants}
             initial="hidden"
             animate="visible"
-            className="absolute bottom-[25%] left-[25%] w-14 h-14 bg-white shadow-lg border border-[#EBEBEB] rounded-xl flex items-center justify-center text-[#6B6B6B]"
+            className="absolute bottom-[25%] left-[25%] w-14 h-14 bg-card shadow-lg border border-border rounded-xl flex items-center justify-center text-muted-foreground"
           >
             <motion.div animate={{ y: [0, -8, 0] }} transition={{ duration: 3.5, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}>
               <CustomCube />
@@ -215,7 +215,7 @@ export default function IntroPage() {
             variants={iconVariants}
             initial="hidden"
             animate="visible"
-            className="absolute bottom-[20%] right-[25%] w-16 h-16 bg-white shadow-lg border border-[#EBEBEB] rounded-full flex items-center justify-center text-[#144637]"
+            className="absolute bottom-[20%] right-[25%] w-16 h-16 bg-card shadow-lg border border-border rounded-full flex items-center justify-center text-primary"
           >
             <motion.div animate={{ y: [0, -12, 0] }} transition={{ duration: 4.5, repeat: Infinity, ease: "easeInOut", delay: 1.5 }}>
               <CustomScan />

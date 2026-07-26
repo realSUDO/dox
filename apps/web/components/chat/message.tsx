@@ -64,13 +64,13 @@ export function ChatMessage({ role, content, citations = [] }: MessageProps) {
           className={cn(
             "flex flex-col max-w-[85%] rounded-3xl px-5 py-4",
             isUser 
-              ? "bg-[#144637] text-white rounded-br-sm" 
-              : "bg-white border border-[#EBEBEB] shadow-sm rounded-bl-sm"
+              ? "bg-primary text-primary-foreground rounded-br-sm" 
+              : "bg-card border border-border shadow-sm rounded-bl-sm"
           )}
         >
           <div className={cn(
             "prose prose-sm max-w-none break-words leading-relaxed",
-            isUser ? "text-white prose-invert" : "text-[#1b1b1d]"
+            isUser ? "text-primary-foreground prose-invert" : "text-foreground"
           )}>
             {renderContent()}
           </div>

@@ -202,7 +202,7 @@ export default function KnowledgeBasePage({ params }: { params: Promise<{ id: st
     if (source.type === "text") return <FileText className="text-orange-500" size={20} />;
     if (source.mimeType?.includes("image")) return <FileImage className="text-purple-500" size={20} />;
     if (source.fileName?.endsWith(".zip")) return <FileArchive className="text-yellow-600" size={20} />;
-    return <FileText className="text-[#144637]" size={20} />;
+    return <FileText className="text-primary" size={20} />;
   };
 
   const isPending = addLinkMutation.isPending || addTextMutation.isPending;
@@ -214,12 +214,12 @@ export default function KnowledgeBasePage({ params }: { params: Promise<{ id: st
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-['Geist',sans-serif] font-bold text-[#1b1b1d]">Knowledge Base</h1>
-            <p className="text-[#404945] mt-1">Manage documents, links, and notes for this leaf.</p>
+            <h1 className="text-3xl font-['Geist',sans-serif] font-bold text-foreground">Knowledge Base</h1>
+            <p className="text-muted-foreground mt-1">Manage documents, links, and notes for this leaf.</p>
           </div>
           <Button 
             onClick={() => setShowUploadArea(!showUploadArea)}
-            className="bg-[#144637] hover:bg-[#0F3529] text-white flex items-center gap-2"
+            className="bg-primary hover:bg-primary/90 text-primary-foreground flex items-center gap-2"
           >
             {showUploadArea ? "Close Upload" : <><Plus size={16} /> Add Data</>}
           </Button>
@@ -227,15 +227,15 @@ export default function KnowledgeBasePage({ params }: { params: Promise<{ id: st
 
         {/* Toggleable Upload Area */}
         {showUploadArea && (
-          <div className="bg-white border border-[#EBEBEB] rounded-2xl p-6 shadow-sm animate-in slide-in-from-top-4 fade-in duration-300">
+          <div className="bg-card border border-border rounded-2xl p-6 shadow-sm animate-in slide-in-from-top-4 fade-in duration-300">
             <div className="space-y-6">
               
               {/* Drag and Drop */}
               <div 
                 className={`border-2 border-dashed rounded-xl p-10 text-center transition-colors cursor-pointer ${
-                  isUploading ? "border-[#144637]/30 bg-[#f0edef]/50" 
-                  : isDragging ? "border-[#144637] bg-[#144637]/5 scale-[1.02] transform transition-transform" 
-                  : "border-[#c0c9c3] hover:bg-[#f0edef]/50 hover:border-[#144637]/50"
+                  isUploading ? "border-primary/30 bg-secondary/50" 
+                  : isDragging ? "border-[#144637] bg-primary/5 scale-[1.02] transform transition-transform" 
+                  : "border-border hover:bg-secondary/50 hover:border-primary/50"
                 }`}
                 onClick={() => !isUploading && fileInputRef.current?.click()}
                 onDragOver={handleDragOver}
@@ -244,14 +244,14 @@ export default function KnowledgeBasePage({ params }: { params: Promise<{ id: st
               >
                 {isUploading ? (
                   <div className="flex flex-col items-center">
-                    <Loader2 className="h-10 w-10 text-[#144637] animate-spin mb-4" />
-                    <h3 className="text-lg font-medium text-[#1b1b1d]">Uploading {file?.name}...</h3>
+                    <Loader2 className="h-10 w-10 text-primary animate-spin mb-4" />
+                    <h3 className="text-lg font-medium text-foreground">Uploading {file?.name}...</h3>
                   </div>
                 ) : (
                   <>
-                    <UploadCloud className="mx-auto h-12 w-12 text-[#144637] opacity-60 mb-4" />
-                    <h3 className="text-lg font-medium text-[#1b1b1d] mb-1">Click to upload files</h3>
-                    <p className="text-sm text-[#404945]">PDF, Text, Subtitles, Images, ZIP (Max 50MB)</p>
+                    <UploadCloud className="mx-auto h-12 w-12 text-primary opacity-60 mb-4" />
+                    <h3 className="text-lg font-medium text-foreground mb-1">Click to upload files</h3>
+                    <p className="text-sm text-muted-foreground">PDF, Text, Subtitles, Images, ZIP (Max 50MB)</p>
                   </>
                 )}
                 <input 
@@ -265,13 +265,13 @@ export default function KnowledgeBasePage({ params }: { params: Promise<{ id: st
 
               {/* Unified Input */}
               <div className="space-y-3">
-                <label className="text-sm font-medium text-[#1b1b1d]">Quick Add</label>
+                <label className="text-sm font-medium text-foreground">Quick Add</label>
                 <form onSubmit={handleUnifiedSubmit} className="relative">
                   <Textarea
                     value={unifiedInput}
                     onChange={(e) => setUnifiedInput(e.target.value)}
                     placeholder="Paste a URL or raw text here..."
-                    className="min-h-[100px] border-2 border-dashed border-[#c0c9c3] rounded-xl focus:border-[#144637] focus:ring-0 text-sm resize-none pb-12"
+                    className="min-h-[100px] border-2 border-dashed border-border rounded-xl focus:border-[#144637] focus:ring-0 text-sm resize-none pb-12"
                     disabled={isPending}
                   />
                   <div className="absolute bottom-3 right-3">
@@ -279,7 +279,7 @@ export default function KnowledgeBasePage({ params }: { params: Promise<{ id: st
                       type="submit" 
                       size="sm"
                       disabled={!unifiedInput.trim() || isPending}
-                      className="bg-[#144637] hover:bg-[#0F3529] text-white"
+                      className="bg-primary hover:bg-primary/90 text-primary-foreground"
                     >
                       {isPending ? <Loader2 size={16} className="animate-spin" /> : "Save"}
                     </Button>
@@ -299,26 +299,26 @@ export default function KnowledgeBasePage({ params }: { params: Promise<{ id: st
           
           {isSourcesLoading ? (
             <div className="flex justify-center py-12">
-              <Loader2 className="w-8 h-8 animate-spin text-[#144637] opacity-50" />
+              <Loader2 className="w-8 h-8 animate-spin text-primary opacity-50" />
             </div>
           ) : !sources || sources.length === 0 ? (
-            <div className="text-center py-12 border border-[#EBEBEB] border-dashed rounded-xl bg-[#FBFBFA]">
-              <p className="text-[#404945]">No resources added yet.</p>
+            <div className="text-center py-12 border border-border border-dashed rounded-xl bg-background">
+              <p className="text-muted-foreground">No resources added yet.</p>
             </div>
           ) : (
-            <div className="bg-white border border-[#EBEBEB] rounded-xl overflow-hidden shadow-sm">
+            <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm">
               <div className="divide-y divide-[#EBEBEB]">
                 {sources.map((source) => (
-                  <div key={source.id} className="flex items-center justify-between p-4 hover:bg-[#FBFBFA] transition-colors">
+                  <div key={source.id} className="flex items-center justify-between p-4 hover:bg-background transition-colors">
                     <div className="flex items-center gap-4 min-w-0 flex-1">
-                      <div className="w-10 h-10 rounded-lg bg-[#f0edef] flex items-center justify-center shrink-0">
+                      <div className="w-10 h-10 rounded-lg bg-secondary flex items-center justify-center shrink-0">
                         {getSourceIcon(source)}
                       </div>
                       <div className="min-w-0 flex-1">
-                        <h4 className="font-medium text-sm text-[#1b1b1d] truncate">
+                        <h4 className="font-medium text-sm text-foreground truncate">
                           {source.fileName || source.sourceUrl || source.metadata?.title || "Untitled Source"}
                         </h4>
-                        <div className="flex items-center gap-3 mt-1 text-xs text-[#404945]">
+                        <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
                           <span className="capitalize">{source.type}</span>
                           {source.fileSizeBytes && (
                             <span>• {(source.fileSizeBytes / 1024 / 1024).toFixed(2)} MB</span>
@@ -335,8 +335,8 @@ export default function KnowledgeBasePage({ params }: { params: Promise<{ id: st
                           </div>
                         )}
                         {source.zipSummary && (
-                          <div className="mt-2 text-xs text-[#404945] bg-[#f0edef]/50 p-3 rounded-lg border border-[#EBEBEB]">
-                            <div className="font-semibold text-[#144637] mb-1">AI Summary:</div>
+                          <div className="mt-2 text-xs text-muted-foreground bg-secondary/50 p-3 rounded-lg border border-border">
+                            <div className="font-semibold text-primary mb-1">AI Summary:</div>
                             {source.zipSummary}
                             {source.status === 'pending_approval' && source.zipApproved !== undefined && (
                               <div className={`mt-2 font-medium ${source.zipApproved ? 'text-green-600' : 'text-red-600'}`}>
@@ -358,7 +358,7 @@ export default function KnowledgeBasePage({ params }: { params: Promise<{ id: st
                         <Button
                           variant="outline"
                           size="sm"
-                          className="text-[#144637] border-[#144637] hover:bg-[#144637] hover:text-white h-8 px-3 transition-colors"
+                          className="text-primary border-[#144637] hover:bg-primary hover:text-primary-foreground h-8 px-3 transition-colors"
                           onClick={() => approveMutation.mutate({ sourceId: source.id })}
                           disabled={approveMutation.isPending}
                         >
@@ -369,7 +369,7 @@ export default function KnowledgeBasePage({ params }: { params: Promise<{ id: st
                       <Button 
                         variant="ghost" 
                         size="sm" 
-                        className="text-[#404945] hover:bg-[#e4e2e4] h-8 px-2"
+                        className="text-muted-foreground hover:bg-accent h-8 px-2"
                         onClick={() => setPreviewSource(source)}
                       >
                         <Eye size={16} className="mr-1" />
@@ -378,8 +378,8 @@ export default function KnowledgeBasePage({ params }: { params: Promise<{ id: st
                       
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-[#e4e2e4]">
-                            <MoreVertical size={16} className="text-[#404945]" />
+                          <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-accent">
+                            <MoreVertical size={16} className="text-muted-foreground" />
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
@@ -407,8 +407,8 @@ export default function KnowledgeBasePage({ params }: { params: Promise<{ id: st
 
       {/* Preview Sheet */}
       <Sheet open={!!previewSource} onOpenChange={(open) => !open && setPreviewSource(null)}>
-        <SheetContent className="w-full sm:max-w-xl md:max-w-2xl bg-white border-l border-[#c0c9c3] shadow-2xl p-0 flex flex-col">
-          <SheetHeader className="p-6 border-b border-[#EBEBEB]">
+        <SheetContent className="w-full sm:max-w-xl md:max-w-2xl bg-card border-l border-border shadow-2xl p-0 flex flex-col">
+          <SheetHeader className="p-6 border-b border-border">
             <SheetTitle className="text-xl flex items-center gap-3">
               {previewSource && getSourceIcon(previewSource)}
               <span className="truncate">
@@ -421,15 +421,15 @@ export default function KnowledgeBasePage({ params }: { params: Promise<{ id: st
           </SheetHeader>
           
           <ScrollArea className="flex-1 p-6">
-            <div className="space-y-4 text-sm text-[#1b1b1d]">
+            <div className="space-y-4 text-sm text-foreground">
               {previewSource?.type === 'link' && (
-                <div className="p-4 bg-[#fcf8fb] rounded-lg border border-[#EBEBEB]">
-                  <p className="font-medium text-[#404945] mb-2">Original URL</p>
+                <div className="p-4 bg-background rounded-lg border border-border">
+                  <p className="font-medium text-muted-foreground mb-2">Original URL</p>
                   <a href={previewSource.sourceUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline break-all">
                     {previewSource.sourceUrl}
                   </a>
                   {previewSource.sourceUrl && getYoutubeVideoId(previewSource.sourceUrl) && (
-                    <div className="mt-4 aspect-video w-full rounded-lg overflow-hidden border border-[#EBEBEB]">
+                    <div className="mt-4 aspect-video w-full rounded-lg overflow-hidden border border-border">
                       <iframe
                         width="100%"
                         height="100%"
@@ -446,7 +446,7 @@ export default function KnowledgeBasePage({ params }: { params: Promise<{ id: st
               
               {previewSource?.mimeType === 'application/pdf' ? (
                 isDownloadLoading ? (
-                  <div className="flex justify-center p-12"><Loader2 className="animate-spin text-[#144637] w-8 h-8 opacity-50" /></div>
+                  <div className="flex justify-center p-12"><Loader2 className="animate-spin text-primary w-8 h-8 opacity-50" /></div>
                 ) : downloadData?.url ? (
                   <object 
                     data={downloadData.url} 
@@ -462,9 +462,9 @@ export default function KnowledgeBasePage({ params }: { params: Promise<{ id: st
                 )
               ) : previewSource?.mimeType?.startsWith('image/') ? (
                 isDownloadLoading ? (
-                  <div className="flex justify-center p-12"><Loader2 className="animate-spin text-[#144637] w-8 h-8 opacity-50" /></div>
+                  <div className="flex justify-center p-12"><Loader2 className="animate-spin text-primary w-8 h-8 opacity-50" /></div>
                 ) : downloadData?.url ? (
-                  <div className="flex justify-center bg-gray-50 p-4 rounded-lg border border-[#EBEBEB]">
+                  <div className="flex justify-center bg-gray-50 p-4 rounded-lg border border-border">
                     <img src={downloadData.url} alt="Preview" className="max-w-full h-auto max-h-[600px] rounded object-contain" />
                   </div>
                 ) : (
@@ -475,13 +475,13 @@ export default function KnowledgeBasePage({ params }: { params: Promise<{ id: st
               ) : previewSource?.mimeType === 'application/zip' ? (
                 <div className="space-y-4">
                   {previewSource.zipSummary || previewSource.metadata?.summary ? (
-                    <div className="p-4 bg-[#f0edef] rounded-lg border border-[#c0c9c3]">
-                      <h3 className="font-semibold text-[#144637] mb-2 flex items-center gap-2">
+                    <div className="p-4 bg-secondary rounded-lg border border-border">
+                      <h3 className="font-semibold text-primary mb-2 flex items-center gap-2">
                         <FileArchive size={18} /> Repository Summary
                       </h3>
-                      <p className="text-[#1b1b1d] leading-relaxed">{previewSource.zipSummary || previewSource.metadata.summary}</p>
+                      <p className="text-foreground leading-relaxed">{previewSource.zipSummary || previewSource.metadata.summary}</p>
                       {previewSource.metadata?.reasoning && (
-                        <p className="mt-3 text-sm text-[#404945] italic">Reasoning: {previewSource.metadata.reasoning}</p>
+                        <p className="mt-3 text-sm text-muted-foreground italic">Reasoning: {previewSource.metadata.reasoning}</p>
                       )}
                     </div>
                   ) : (
@@ -503,16 +503,16 @@ export default function KnowledgeBasePage({ params }: { params: Promise<{ id: st
                   )}
 
                   {previewSource.metadata?.fileTree && Array.isArray(previewSource.metadata.fileTree) && (
-                    <div className="p-4 bg-gray-50 rounded-lg border border-[#EBEBEB]">
-                      <h4 className="font-medium text-[#404945] mb-3">Extracted Files ({previewSource.metadata.fileTree.length})</h4>
-                      <pre className="whitespace-pre-wrap font-mono text-xs overflow-x-auto text-[#1b1b1d] max-h-[400px] overflow-y-auto">
+                    <div className="p-4 bg-gray-50 rounded-lg border border-border">
+                      <h4 className="font-medium text-muted-foreground mb-3">Extracted Files ({previewSource.metadata.fileTree.length})</h4>
+                      <pre className="whitespace-pre-wrap font-mono text-xs overflow-x-auto text-foreground max-h-[400px] overflow-y-auto">
                         {previewSource.metadata.fileTree.join('\n')}
                       </pre>
                     </div>
                   )}
                 </div>
               ) : (
-                <div className="p-4 bg-gray-50 rounded-lg border border-[#EBEBEB] whitespace-pre-wrap font-mono text-xs overflow-x-auto">
+                <div className="p-4 bg-gray-50 rounded-lg border border-border whitespace-pre-wrap font-mono text-xs overflow-x-auto">
                   {previewSource?.textContent || "No text content available for preview yet. It may still be processing."}
                 </div>
               )}

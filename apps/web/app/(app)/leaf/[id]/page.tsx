@@ -249,9 +249,9 @@ export default function LeafPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="absolute inset-0 z-50 bg-[#fcf8fb]/90 backdrop-blur-sm flex items-center justify-center border-4 border-dashed border-[#144637] rounded-xl m-4"
+            className="absolute inset-0 z-50 bg-background/90 backdrop-blur-sm flex items-center justify-center border-4 border-dashed border-[#144637] rounded-xl m-4"
           >
-            <div className="flex flex-col items-center justify-center text-[#144637]">
+            <div className="flex flex-col items-center justify-center text-primary">
               <UploadCloud size={64} className="mb-4" />
               <h2 className="text-2xl font-bold font-['Geist',sans-serif]">Drop files to add to Knowledge Base</h2>
               <p className="text-lg opacity-80 mt-2">Supports PDF, Text, and Images</p>
@@ -263,28 +263,28 @@ export default function LeafPage() {
         {messages.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center w-full">
             {isSourcesLoading ? (
-               <div className="flex flex-col items-center justify-center text-[#404945]">
+               <div className="flex flex-col items-center justify-center text-muted-foreground">
                  <Loader2 className="w-8 h-8 animate-spin mb-4" />
                  <p>Loading workspace...</p>
                </div>
             ) : (!sources || sources.length === 0) ? (
               <div className="max-w-2xl w-full px-10 text-center space-y-8 -mt-32">
                 <div className="space-y-2">
-                  <h2 className="font-['Geist',sans-serif] text-3xl font-semibold text-[#1b1b1d] tracking-tight">
+                  <h2 className="font-['Geist',sans-serif] text-3xl font-semibold text-foreground tracking-tight">
                     Build your Knowledge Base
                   </h2>
-                  <p className="font-['Inter',sans-serif] text-[#404945] max-w-lg mx-auto">
+                  <p className="font-['Inter',sans-serif] text-muted-foreground max-w-lg mx-auto">
                     Upload documents or add web links to start synthesizing information in this leaf.
                   </p>
                 </div>
 
                 <div 
-                  className="border-2 border-dashed border-[#c0c9c3] rounded-2xl p-12 text-center hover:bg-[#e4e2e4]/50 transition-colors cursor-pointer bg-white"
+                  className="border-2 border-dashed border-border rounded-2xl p-12 text-center hover:bg-accent/50 transition-colors cursor-pointer bg-card"
                   onClick={() => fileInputRef.current?.click()}
                 >
-                  <UploadCloud className="mx-auto h-12 w-12 text-[#144637] mb-4 opacity-50" />
-                  <h3 className="text-lg font-medium text-[#1b1b1d] mb-1">Click to upload files</h3>
-                  <p className="text-sm text-[#404945]">
+                  <UploadCloud className="mx-auto h-12 w-12 text-primary mb-4 opacity-50" />
+                  <h3 className="text-lg font-medium text-foreground mb-1">Click to upload files</h3>
+                  <p className="text-sm text-muted-foreground">
                     Supports PDF, Text, and Images (Max 50MB)
                   </p>
                   <input 
@@ -295,7 +295,7 @@ export default function LeafPage() {
                     disabled={isUploading}
                   />
                   {isUploading && (
-                    <div className="mt-4 flex items-center justify-center gap-2 text-sm text-[#144637]">
+                    <div className="mt-4 flex items-center justify-center gap-2 text-sm text-primary">
                       <Loader2 size={16} className="animate-spin" /> Uploading...
                     </div>
                   )}
@@ -303,27 +303,27 @@ export default function LeafPage() {
 
                 <div className="relative">
                   <div className="absolute inset-0 flex items-center">
-                    <span className="w-full border-t border-[#c0c9c3]"></span>
+                    <span className="w-full border-t border-border"></span>
                   </div>
                   <div className="relative flex justify-center text-xs uppercase">
-                    <span className="bg-[#fcf8fb] px-2 text-[#404945]">Or add a web link</span>
+                    <span className="bg-background px-2 text-muted-foreground">Or add a web link</span>
                   </div>
                 </div>
 
                 <form onSubmit={handleAddUrl} className="relative flex items-center">
-                  <LinkIcon className="absolute left-4 text-[#404945] opacity-50" size={18} />
+                  <LinkIcon className="absolute left-4 text-muted-foreground opacity-50" size={18} />
                   <input
                     type="url"
                     value={urlInput}
                     onChange={(e) => setUrlInput(e.target.value)}
                     placeholder="https://example.com/article"
-                    className="w-full bg-white border-2 border-dashed border-[#c0c9c3] rounded-xl py-4 pl-12 pr-24 text-sm focus:outline-none focus:border-[#144637] transition-colors"
+                    className="w-full bg-card border-2 border-dashed border-border rounded-xl py-4 pl-12 pr-24 text-sm focus:outline-none focus:border-[#144637] transition-colors"
                     disabled={addLinkMutation.isPending}
                   />
                   <button 
                     type="submit"
                     disabled={!urlInput.trim() || addLinkMutation.isPending}
-                    className="absolute right-2 px-4 py-2 bg-[#144637] text-white rounded-lg text-sm font-medium hover:opacity-90 disabled:opacity-50 transition-all"
+                    className="absolute right-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:opacity-90 disabled:opacity-50 transition-all"
                   >
                     {addLinkMutation.isPending ? <Loader2 size={16} className="animate-spin" /> : "Add Link"}
                   </button>
@@ -331,13 +331,13 @@ export default function LeafPage() {
               </div>
             ) : (
               <div className="max-w-3xl w-full px-10 text-center space-y-6 -mt-32">
-                <div className="inline-flex items-center justify-center p-10 rounded-full bg-[#f0edef] mb-6">
-                  <BookOpen size={64} className="text-[#144637] opacity-20" />
+                <div className="inline-flex items-center justify-center p-10 rounded-full bg-secondary mb-6">
+                  <BookOpen size={64} className="text-primary opacity-20" />
                 </div>
-                <h2 className="font-['Geist',sans-serif] text-5xl font-semibold text-[#1b1b1d] tracking-tight">
+                <h2 className="font-['Geist',sans-serif] text-5xl font-semibold text-foreground tracking-tight">
                   Ask anything
                 </h2>
-                <p className="font-['Inter',sans-serif] text-lg text-[#404945] max-w-xl mx-auto leading-relaxed">
+                <p className="font-['Inter',sans-serif] text-lg text-muted-foreground max-w-xl mx-auto leading-relaxed">
                   Connect your documents, research notes, and creative thoughts. Dox helps you
                   synthesize complex information with ease.
                 </p>
@@ -345,19 +345,19 @@ export default function LeafPage() {
                 <div className="flex flex-wrap justify-center gap-2 pt-10">
                   <button
                     onClick={() => setInput("Summarize my recent notes")}
-                    className="px-4 py-2 bg-white border border-[#c0c9c3] rounded-full text-sm font-medium text-[#404945] hover:bg-[#f0edef] transition-colors"
+                    className="px-4 py-2 bg-card border border-border rounded-full text-sm font-medium text-muted-foreground hover:bg-secondary transition-colors"
                   >
                     Summarize my recent notes
                   </button>
                   <button
                     onClick={() => setInput("Find connections in my sources")}
-                    className="px-4 py-2 bg-white border border-[#c0c9c3] rounded-full text-sm font-medium text-[#404945] hover:bg-[#f0edef] transition-colors"
+                    className="px-4 py-2 bg-card border border-border rounded-full text-sm font-medium text-muted-foreground hover:bg-secondary transition-colors"
                   >
                     Find connections in my sources
                   </button>
                   <button
                     onClick={() => setInput("Generate an outline")}
-                    className="px-4 py-2 bg-white border border-[#c0c9c3] rounded-full text-sm font-medium text-[#404945] hover:bg-[#f0edef] transition-colors"
+                    className="px-4 py-2 bg-card border border-border rounded-full text-sm font-medium text-muted-foreground hover:bg-secondary transition-colors"
                   >
                     Generate an outline
                   </button>
@@ -378,12 +378,12 @@ export default function LeafPage() {
             {queryMutation.isPending && (
               <div className="flex w-full px-4 py-6 text-sm">
                 <div className="flex w-full items-start gap-4">
-                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-[#c0c9c3] bg-white">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-border bg-card">
                     <img src="/dox.svg" alt="Dox AI" className="h-6 w-6 animate-pulse" />
                   </div>
                   <div className="flex-1 space-y-2 px-1">
-                    <div className="font-semibold text-[#1b1b1d]">Dox Assistant</div>
-                    <div className="text-[#404945]">Synthesizing information...</div>
+                    <div className="font-semibold text-foreground">Dox Assistant</div>
+                    <div className="text-muted-foreground">Synthesizing information...</div>
                   </div>
                 </div>
               </div>
@@ -407,11 +407,11 @@ export default function LeafPage() {
                 exit={{ opacity: 0, scale: 0.9 }}
                 className={`flex items-center gap-2 border rounded-[16px] pl-3 pr-2 py-1.5 shadow-sm text-sm transition-colors ${
                   file.status === 'pending_approval' 
-                    ? "bg-[#E8F3F0] border-[#144637]/30 text-[#144637]" 
-                    : "bg-white border-[#c0c9c3] text-[#1b1b1d]"
+                    ? "bg-primary/10 border-primary/30 text-primary" 
+                    : "bg-card border-border text-foreground"
                 }`}
               >
-                {(file.status === 'uploading' || file.status === 'processing') && <Loader2 size={16} className="animate-spin text-[#144637] shrink-0" />}
+                {(file.status === 'uploading' || file.status === 'processing') && <Loader2 size={16} className="animate-spin text-primary shrink-0" />}
                 {file.status === 'pending_approval' && <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse shrink-0" />}
                 {file.status === 'success' && <CheckCircle2 size={16} className="text-green-600 shrink-0" />}
                 {file.status === 'error' && <X size={16} className="text-red-500 shrink-0" />}
@@ -432,7 +432,7 @@ export default function LeafPage() {
                       });
                     }}
                     disabled={approveMutation.isPending}
-                    className="bg-[#144637] hover:bg-[#0F3529] text-white rounded-full py-1 px-3 transition-all flex items-center gap-1.5 shrink-0 ml-2 shadow-sm hover:shadow-md"
+                    className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-full py-1 px-3 transition-all flex items-center gap-1.5 shrink-0 ml-2 shadow-sm hover:shadow-md"
                   >
                     <span className="text-xs font-semibold tracking-wide uppercase">Approve</span>
                   </button>
@@ -450,29 +450,29 @@ export default function LeafPage() {
               animate={{ opacity: 1, height: 'auto', marginBottom: 8 }}
               exit={{ opacity: 0, height: 0, marginBottom: 0 }}
               onSubmit={handleAddInlineLink}
-              className="w-full bg-[#fcf8fb]/95 backdrop-blur-md border-2 border-dashed border-[#c0c9c3] rounded-[24px] flex items-center p-2 overflow-hidden shadow-lg"
+              className="w-full bg-background/95 backdrop-blur-md border-2 border-dashed border-border rounded-[24px] flex items-center p-2 overflow-hidden shadow-lg"
             >
-              <LinkIcon className="text-[#404945] opacity-50 ml-2 shrink-0" size={18} />
+              <LinkIcon className="text-muted-foreground opacity-50 ml-2 shrink-0" size={18} />
               <input
                 type="url"
                 autoFocus
                 value={inlineLinkUrl}
                 onChange={(e) => setInlineLinkUrl(e.target.value)}
                 placeholder="https://example.com/article"
-                className="flex-1 bg-transparent border-none focus:ring-0 text-sm text-[#1b1b1d] px-3 py-2 outline-none"
+                className="flex-1 bg-transparent border-none focus:ring-0 text-sm text-foreground px-3 py-2 outline-none"
                 disabled={addLinkMutation.isPending}
               />
               <button 
                 type="submit"
                 disabled={!inlineLinkUrl.trim() || addLinkMutation.isPending}
-                className="px-4 py-2 bg-[#144637] text-white rounded-full text-sm font-medium hover:opacity-90 disabled:opacity-50 transition-all shrink-0 flex items-center gap-2"
+                className="px-4 py-2 bg-primary text-primary-foreground rounded-full text-sm font-medium hover:opacity-90 disabled:opacity-50 transition-all shrink-0 flex items-center gap-2"
               >
                 {addLinkMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : "Add"}
               </button>
               <button
                 type="button"
                 onClick={() => setShowLinkInput(false)}
-                className="p-2 text-[#404945] hover:bg-[#e4e2e4] rounded-full ml-1 shrink-0 transition-all"
+                className="p-2 text-muted-foreground hover:bg-accent rounded-full ml-1 shrink-0 transition-all"
               >
                 <X size={16} />
               </button>
@@ -482,7 +482,7 @@ export default function LeafPage() {
 
         <motion.div 
           layout
-          className="w-full bg-[#fcf8fb]/80 backdrop-blur-md border border-[#c0c9c3] rounded-[32px] shadow-lg p-2 flex items-end gap-2"
+          className="w-full bg-background/80 backdrop-blur-md border border-border rounded-[32px] shadow-lg p-2 flex items-end gap-2"
         >
           <div className="flex items-center gap-1 pb-1 pl-1 flex-none">
             <input 
@@ -495,7 +495,7 @@ export default function LeafPage() {
             <button
               onClick={() => fileInputRef.current?.click()}
               type="button"
-              className="h-10 w-10 flex items-center justify-center text-[#404945] hover:bg-[#e4e2e4] rounded-full transition-all flex-none"
+              className="h-10 w-10 flex items-center justify-center text-muted-foreground hover:bg-accent rounded-full transition-all flex-none"
               title="Add to Knowledge Base"
             >
               <FileUp size={20} />
@@ -503,7 +503,7 @@ export default function LeafPage() {
             <button
               onClick={() => setShowLinkInput(!showLinkInput)}
               type="button"
-              className="h-10 w-10 flex items-center justify-center text-[#404945] hover:bg-[#e4e2e4] rounded-full transition-all flex-none"
+              className="h-10 w-10 flex items-center justify-center text-muted-foreground hover:bg-accent rounded-full transition-all flex-none"
               title="Add Link"
             >
               <LinkIcon size={20} />
@@ -512,7 +512,7 @@ export default function LeafPage() {
           
           <motion.textarea
             layout
-            className="flex-1 bg-transparent border-none focus:ring-0 font-['Inter',sans-serif] text-base text-[#1b1b1d] placeholder:text-[#404945]/50 py-3 px-2 outline-none resize-none min-h-[44px] max-h-[200px]"
+            className="flex-1 bg-transparent border-none focus:ring-0 font-['Inter',sans-serif] text-base text-foreground placeholder:text-muted-foreground/50 py-3 px-2 outline-none resize-none min-h-[44px] max-h-[200px]"
             placeholder="Start a new conversation..."
             value={input}
             onChange={(e) => {
@@ -528,7 +528,7 @@ export default function LeafPage() {
             <button
               onClick={handleSend}
               disabled={!input.trim() || queryMutation.isPending}
-              className="h-10 w-10 flex items-center justify-center bg-[#144637] text-white rounded-full hover:opacity-90 scale-100 active:scale-95 transition-transform disabled:opacity-50 flex-none"
+              className="h-10 w-10 flex items-center justify-center bg-primary text-primary-foreground rounded-full hover:opacity-90 scale-100 active:scale-95 transition-transform disabled:opacity-50 flex-none"
               title="Send"
             >
               {queryMutation.isPending ? (

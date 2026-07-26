@@ -14,7 +14,7 @@ export default function AdminQueuesPage() {
         <h1 className="text-2xl font-bold tracking-tight">Queues Dashboard</h1>
         <p className="text-sm text-muted-foreground mt-1">Live BullMQ job visibility via Bull Board.</p>
       </div>
-      <div className="flex-1 bg-white">
+      <div className="flex-1 bg-card">
         <iframe 
           src={iframeUrl} 
           className="w-full h-full border-none"

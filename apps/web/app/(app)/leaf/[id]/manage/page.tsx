@@ -127,7 +127,7 @@ export default function LeafDetailPage({ params }: { params: Promise<{ id: strin
                       {source.status === "pending_approval" && (
                         <Dialog>
                           <DialogTrigger asChild>
-                            <Button variant="default" size="sm" className="bg-green-600 hover:bg-green-700 text-white">
+                            <Button variant="default" size="sm" className="bg-green-600 hover:bg-green-700 text-primary-foreground">
                               <CheckCircle className="h-4 w-4 mr-2" /> Review & Approve
                             </Button>
                           </DialogTrigger>
