@@ -169,54 +169,56 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            {isLoading ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                {[1, 2, 3, 4].map((i) => (
-                  <div key={i} className="h-[200px] bg-white border border-[#EBEBEB] rounded-xl animate-pulse"></div>
-                ))}
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                {/* Create New Card */}
-                <button 
-                  onClick={() => setIsDialogOpen(true)}
-                  className="h-[200px] bg-white border border-[#EBEBEB] border-dashed rounded-xl flex flex-col items-center justify-center hover:bg-[#F9F9F9] hover:border-[#144637]/50 transition-all group text-left"
-                >
-                  <div className="w-10 h-10 bg-[#F3F3F3] rounded-full flex items-center justify-center mb-3 group-hover:bg-[#144637] group-hover:text-white transition-colors">
-                    <Plus size={20} />
-                  </div>
-                  <span className="font-medium text-sm">New Leaf</span>
-                </button>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {/* Create New Card (Always visible) */}
+              <button 
+                onClick={() => setIsDialogOpen(true)}
+                className="h-[200px] bg-white border border-[#EBEBEB] border-dashed rounded-xl flex flex-col items-center justify-center hover:bg-[#F9F9F9] hover:border-[#144637]/50 transition-all group text-left"
+              >
+                <div className="w-10 h-10 bg-[#F3F3F3] rounded-full flex items-center justify-center mb-3 group-hover:bg-[#144637] group-hover:text-white transition-colors">
+                  <Plus size={20} />
+                </div>
+                <span className="font-medium text-sm">New Leaf</span>
+              </button>
 
-                {leafs?.map((leaf) => (
-                  <Link href={`/leaf/${leaf.id}`} key={leaf.id}>
-                    <div className="h-[200px] bg-white border border-[#EBEBEB] rounded-xl flex flex-col hover:shadow-md hover:border-[#D1D1D1] transition-all cursor-pointer group">
-                      <div className="flex-1 p-5 border-b border-[#F3F3F3] bg-gradient-to-b from-[#FBFBFA] to-white rounded-t-xl relative overflow-hidden">
-                        {/* Placeholder graphic for the leaf card */}
-                        <div className="absolute top-4 right-4">
-                          <button className="opacity-0 group-hover:opacity-100 p-1 hover:bg-[#F3F3F3] rounded text-[#6B6B6B] transition-all">
-                            <MoreVertical size={16} />
-                          </button>
+              {isLoading ? (
+                <>
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="h-[200px] bg-white border border-[#EBEBEB] rounded-xl animate-pulse"></div>
+                  ))}
+                </>
+              ) : (
+                <>
+                  {leafs?.map((leaf) => (
+                    <Link href={`/leaf/${leaf.id}`} key={leaf.id}>
+                      <div className="h-[200px] bg-white border border-[#EBEBEB] rounded-xl flex flex-col hover:shadow-md hover:border-[#D1D1D1] transition-all cursor-pointer group">
+                        <div className="flex-1 p-5 border-b border-[#F3F3F3] bg-gradient-to-b from-[#FBFBFA] to-white rounded-t-xl relative overflow-hidden">
+                          {/* Placeholder graphic for the leaf card */}
+                          <div className="absolute top-4 right-4">
+                            <button className="opacity-0 group-hover:opacity-100 p-1 hover:bg-[#F3F3F3] rounded text-[#6B6B6B] transition-all">
+                              <MoreVertical size={16} />
+                            </button>
+                          </div>
+                          <div className="w-12 h-12 bg-white shadow-sm border border-[#EBEBEB] rounded-lg flex items-center justify-center mb-3">
+                             <FileText className="text-[#144637]" size={24} />
+                          </div>
+                          <h3 className="font-semibold text-[15px] truncate pr-8">{leaf.name}</h3>
+                          {leaf.description && (
+                            <p className="text-xs text-[#6B6B6B] mt-1 line-clamp-2">{leaf.description}</p>
+                          )}
                         </div>
-                        <div className="w-12 h-12 bg-white shadow-sm border border-[#EBEBEB] rounded-lg flex items-center justify-center mb-3">
-                           <FileText className="text-[#144637]" size={24} />
+                        <div className="h-[44px] px-5 flex items-center justify-between text-[#6B6B6B] text-[11px] font-medium">
+                          <span>Edited {new Date(leaf.updatedAt).toLocaleDateString()}</span>
+                          <div className="flex items-center gap-1">
+                            <span className="w-2 h-2 rounded-full bg-green-500"></span> Active
+                          </div>
                         </div>
-                        <h3 className="font-semibold text-[15px] truncate pr-8">{leaf.name}</h3>
-                        {leaf.description && (
-                          <p className="text-xs text-[#6B6B6B] mt-1 line-clamp-2">{leaf.description}</p>
-                        )}
                       </div>
-                      <div className="h-[44px] px-5 flex items-center justify-between text-[#6B6B6B] text-[11px] font-medium">
-                        <span>Edited {new Date(leaf.updatedAt).toLocaleDateString()}</span>
-                        <div className="flex items-center gap-1">
-                          <span className="w-2 h-2 rounded-full bg-green-500"></span> Active
-                        </div>
-                      </div>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            )}
+                    </Link>
+                  ))}
+                </>
+              )}
+            </div>
           </div>
         </div>
       </main>
