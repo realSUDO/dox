@@ -8,9 +8,9 @@ import { ThemeToggle } from "~/components/theme-toggle";
 import { trpc } from "~/trpc/client";
 import {
   Menu,
-  Search,
-  Moon,
-  Bell,
+  
+  
+  
   Database,
   History,
   Star,
@@ -109,24 +109,7 @@ export function LeafShell({
             </h1>
           </div>
           
-          <div className="hidden md:flex flex-1 max-w-xl mx-10">
-            <div className="relative w-full">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground opacity-70" size={18} />
-              <input 
-                className="w-full bg-secondary border-none rounded-full py-2 pl-10 pr-4 text-sm font-medium focus:ring-1 focus:ring-[#144637]/20 transition-all outline-none" 
-                placeholder="Search knowledge..." 
-                type="text"
-              />
-            </div>
-          </div>
-          
           <div className="flex items-center gap-4">
-            <button className="p-2 rounded-lg hover:bg-accent transition-colors text-muted-foreground">
-              <Moon size={24} />
-            </button>
-            <button className="p-2 rounded-lg hover:bg-accent transition-colors text-muted-foreground">
-              <Bell size={24} />
-            </button>
             <ThemeToggle />
             <div className="ml-2">
               <UserButton afterSignOutUrl="/" />
