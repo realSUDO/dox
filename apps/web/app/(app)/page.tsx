@@ -1,11 +1,11 @@
 "use client";
 
 import { UserButton } from "@clerk/nextjs";
-
 import { useState } from "react";
 import { trpc } from "~/trpc/client";
 import Link from "next/link";
 import { toast } from "sonner";
+import { motion } from "framer-motion";
 import { 
   Plus, 
   Home, 
@@ -58,32 +58,32 @@ export default function DashboardPage() {
   return (
     <div className="flex h-screen bg-background text-foreground font-['Inter',sans-serif] overflow-hidden">
       {/* Sidebar */}
-      <aside className="w-[240px] border-r border-border bg-card flex flex-col h-full flex-shrink-0">
-        <div className="p-4 mb-2 flex items-center gap-2">
-          <div className="w-8 h-8 bg-primary rounded-md flex items-center justify-center text-primary-foreground font-bold">
-            D
-          </div>
-          <span className="font-semibold text-lg">Dox</span>
+      <aside className="w-[280px] border-r border-border bg-background flex flex-col h-full flex-shrink-0">
+        <div className="h-20 px-8 border-b border-border flex items-center gap-4 shrink-0">
+          <img src="/dox.svg" alt="Dox" className="w-11 h-11" />
+          <span className="font-bold text-3xl tracking-tight">Dox</span>
         </div>
 
-        <nav className="flex-1 px-3 space-y-1">
-          <Link href="/" className="flex items-center gap-3 px-3 py-2 bg-muted text-primary rounded-md font-medium text-sm transition-colors">
-            <Home size={18} />
-            Home
-          </Link>
-          <Link href="#" className="flex items-center gap-3 px-3 py-2 text-muted-foreground hover:bg-accent hover:text-foreground rounded-md font-medium text-sm transition-colors">
-            <Trash2 size={18} />
-            Trash
-          </Link>
-          <Link href="#" className="flex items-center gap-3 px-3 py-2 text-muted-foreground hover:bg-accent hover:text-foreground rounded-md font-medium text-sm transition-colors">
-            <Settings size={18} />
-            Settings
-          </Link>
-          <Link href="#" className="flex items-center gap-3 px-3 py-2 text-muted-foreground hover:bg-accent hover:text-foreground rounded-md font-medium text-sm transition-colors">
-            <CreditCard size={18} />
-            Billing
-          </Link>
-        </nav>
+        <div className="flex flex-col h-full p-4 pt-6">
+          <nav className="flex-1 space-y-1">
+            <Link href="/" className="flex items-center gap-4 p-4 bg-[#bbeed2] text-[#3f6e57] rounded-lg font-medium text-sm transition-colors">
+              <Home size={24} />
+              Home
+            </Link>
+            <Link href="#" className="flex items-center gap-4 p-4 text-muted-foreground hover:bg-accent hover:text-foreground rounded-lg font-medium text-sm transition-colors">
+              <Trash2 size={24} />
+              Trash
+            </Link>
+            <Link href="#" className="flex items-center gap-4 p-4 text-muted-foreground hover:bg-accent hover:text-foreground rounded-lg font-medium text-sm transition-colors">
+              <Settings size={24} />
+              Settings
+            </Link>
+            <Link href="#" className="flex items-center gap-4 p-4 text-muted-foreground hover:bg-accent hover:text-foreground rounded-lg font-medium text-sm transition-colors">
+              <CreditCard size={24} />
+              Billing
+            </Link>
+          </nav>
+        </div>
 
         <div className="p-4 border-t border-border">
           <div className="flex items-center gap-3">
@@ -97,22 +97,21 @@ export default function DashboardPage() {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col min-w-0 h-full">
+      <main className="flex-1 flex flex-col min-w-0 h-full bg-background/50">
         {/* Top Header */}
-        <header className="h-[60px] border-b border-border bg-card flex items-center justify-between px-6 flex-shrink-0">
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Home size={16} />
-            <span>/</span>
-            <span className="font-medium text-foreground">Home</span>
+        <header className="h-[72px] border-b border-border/50 bg-background/80 backdrop-blur-md flex items-center justify-between px-8 flex-shrink-0 sticky top-0 z-10">
+          <div className="flex items-center gap-3 text-sm text-muted-foreground">
+            <img src="/leaf.svg" alt="Leaf" className="w-5 h-5 opacity-90" />
+            <span className="font-semibold text-foreground tracking-tight">Leafs</span>
           </div>
           
           <div className="flex items-center gap-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
+            <div className="relative group">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition-colors" size={16} />
               <input 
                 type="text" 
                 placeholder="Search leafs..." 
-                className="pl-9 pr-4 py-1.5 bg-accent/50 border border-border rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-[#144637] transition-all w-[240px]"
+                className="pl-9 pr-4 py-2 bg-accent/30 hover:bg-accent/50 border border-border/50 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all w-[280px]"
               />
             </div>
             <ThemeToggle />
@@ -160,67 +159,88 @@ export default function DashboardPage() {
         </header>
 
         {/* Leafs Grid */}
-        <div className="flex-1 overflow-y-auto p-8">
-          <div className="max-w-[1200px] mx-auto">
-            <div className="flex items-center justify-between mb-6">
-              <h1 className="text-2xl font-semibold">Recent Leafs</h1>
-              <div className="flex gap-2">
-                <button className="p-1.5 text-muted-foreground hover:bg-accent rounded-md transition-colors bg-accent">
-                  <LayoutGrid size={18} />
-                </button>
-              </div>
+        <div className="flex-1 overflow-y-auto p-8 relative">
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-primary/5 via-background to-background pointer-events-none" />
+          
+          <div className="max-w-[1200px] mx-auto relative z-10">
+            <div className="mb-8">
+              <h1 className="text-3xl font-bold tracking-tight font-['Geist',sans-serif]">Recent Leafs</h1>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {/* Create New Card (Always visible) */}
-              <button 
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ staggerChildren: 0.1 }}
+              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
+            >
+              {/* Create New Card */}
+              <motion.button 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
                 onClick={() => setIsDialogOpen(true)}
-                className="h-[200px] bg-card border border-border border-dashed rounded-xl flex flex-col items-center justify-center hover:bg-accent hover:border-primary/50 transition-all group text-left"
+                className="h-[220px] bg-card/50 backdrop-blur-sm border-2 border-border/50 border-dashed rounded-2xl flex flex-col items-center justify-center hover:bg-accent/50 hover:border-primary/50 transition-all duration-300 group text-left shadow-sm hover:shadow-md"
               >
-                <div className="w-10 h-10 bg-muted rounded-full flex items-center justify-center mb-3 group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
-                  <Plus size={20} />
+                <div className="w-12 h-12 bg-background shadow-sm border border-border/50 rounded-full flex items-center justify-center mb-4 group-hover:bg-primary group-hover:text-primary-foreground group-hover:border-primary transition-all duration-300">
+                  <Plus size={24} />
                 </div>
-                <span className="font-medium text-sm">New Leaf</span>
-              </button>
+                <span className="font-semibold text-sm tracking-wide">New Leaf</span>
+              </motion.button>
 
               {isLoading ? (
                 <>
                   {[1, 2, 3].map((i) => (
-                    <div key={i} className="h-[200px] bg-card border border-border rounded-xl animate-pulse"></div>
+                    <div key={i} className="h-[220px] bg-card/50 border border-border/50 rounded-2xl animate-pulse"></div>
                   ))}
                 </>
               ) : (
                 <>
                   {leafs?.map((leaf) => (
-                    <Link href={`/leaf/${leaf.id}`} key={leaf.id}>
-                      <div className="h-[200px] bg-card border border-border rounded-xl flex flex-col hover:shadow-md hover:border-primary/20 transition-all cursor-pointer group">
-                        <div className="flex-1 p-5 border-b border-[#F3F3F3] bg-gradient-to-b from-background to-card rounded-t-xl relative overflow-hidden">
-                          {/* Placeholder graphic for the leaf card */}
-                          <div className="absolute top-4 right-4">
-                            <button className="opacity-0 group-hover:opacity-100 p-1 hover:bg-muted rounded text-muted-foreground transition-all">
-                              <MoreVertical size={16} />
-                            </button>
+                    <motion.div
+                      key={leaf.id}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      whileHover={{ scale: 1.02, y: -4 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      <Link href={`/leaf/${leaf.id}`} className="block h-full">
+                        <div className="h-[220px] bg-card border border-border/60 rounded-2xl flex flex-col hover:shadow-xl hover:shadow-primary/5 hover:border-primary/30 transition-all duration-300 cursor-pointer group relative overflow-hidden">
+                          {/* Top image section */}
+                          <div className="flex-1 p-6 border-b border-border/40 relative overflow-hidden group/image flex flex-col justify-end">
+                            <div 
+                              className="absolute inset-0 bg-cover bg-center z-0 opacity-80 group-hover:opacity-100 transition-opacity duration-500 group-hover:scale-105"
+                              style={{ backgroundImage: `url('https://cataas.com/cat?width=400&height=300&id=${leaf.id}')` }}
+                            />
+                            {/* Greenish tint overlay */}
+                            <div className="absolute inset-0 bg-primary/20 mix-blend-overlay z-0" />
+                            {/* Text readability gradient */}
+                            <div className="absolute inset-0 bg-gradient-to-t from-card via-card/60 to-transparent z-0" />
+                            
+                            <div className="absolute top-4 right-4 z-10">
+                              <button className="opacity-0 group-hover:opacity-100 p-1.5 bg-background/50 hover:bg-background/90 backdrop-blur-md rounded-md text-foreground transition-all duration-200">
+                                <MoreVertical size={18} />
+                              </button>
+                            </div>
+                            
+                            <div className="relative z-10 mt-12">
+                              <h3 className="font-bold text-[22px] tracking-tight truncate pr-8 text-foreground drop-shadow-md">{leaf.name}</h3>
+                              {leaf.description && (
+                                <p className="text-sm text-foreground/90 mt-1 line-clamp-2 leading-relaxed drop-shadow-md">{leaf.description}</p>
+                              )}
+                            </div>
                           </div>
-                          <div className="w-12 h-12 bg-card shadow-sm border border-border rounded-lg flex items-center justify-center mb-3">
-                             <FileText className="text-primary" size={24} />
+                          {/* Footer */}
+                          <div className="h-[48px] px-6 bg-background/50 flex items-center justify-between text-muted-foreground text-[11px] font-semibold uppercase tracking-wider">
+                            <span>{new Date(leaf.updatedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</span>
                           </div>
-                          <h3 className="font-semibold text-[15px] truncate pr-8">{leaf.name}</h3>
-                          {leaf.description && (
-                            <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{leaf.description}</p>
-                          )}
                         </div>
-                        <div className="h-[44px] px-5 flex items-center justify-between text-muted-foreground text-[11px] font-medium">
-                          <span>Edited {new Date(leaf.updatedAt).toLocaleDateString()}</span>
-                          <div className="flex items-center gap-1">
-                            <span className="w-2 h-2 rounded-full bg-green-500"></span> Active
-                          </div>
-                        </div>
-                      </div>
-                    </Link>
+                      </Link>
+                    </motion.div>
                   ))}
                 </>
               )}
-            </div>
+            </motion.div>
           </div>
         </div>
       </main>

@@ -119,13 +119,20 @@ export function LeafShell({
       </header>
 
       {/* SideNavBar (Knowledge Base Drawer) */}
-      <aside 
-        className={`fixed left-0 top-0 h-full z-40 flex flex-col p-4 bg-background border-r border-border transition-transform duration-300 ease-in-out w-[280px] pt-20 ${
+      <aside
+        className={`fixed left-0 top-0 h-full z-50 flex flex-col bg-background border-r border-border transition-transform duration-300 ease-in-out w-[280px] ${
           drawerOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        <div className="flex flex-col h-full pt-4">
-          
+        <div className="h-20 flex items-center px-8 border-b border-border shrink-0 gap-4">
+          <Link href="/" className="flex items-center gap-4 hover:opacity-80 transition-opacity">
+            <img src="/dox.svg" alt="Dox" className="w-11 h-11" />
+            <span className="font-bold text-3xl tracking-tight">Dox</span>
+          </Link>
+        </div>
+
+        <div className="flex flex-col h-full p-4 pt-6">
+
           {/* Navigation Links */}
           <nav className="flex-1 space-y-1">
             <Link 

@@ -332,8 +332,8 @@ export default function LeafPage() {
               </div>
             ) : (
               <div className="max-w-3xl w-full px-10 text-center space-y-6 -mt-32">
-                <div className="inline-flex items-center justify-center p-10 rounded-full bg-secondary mb-6">
-                  <BookOpen size={64} className="text-primary opacity-20" />
+                <div className="inline-flex items-center justify-center p-8 rounded-full bg-secondary mb-6">
+                  <img src="/dox.svg" alt="Dox" className="w-16 h-16 opacity-30 dark:opacity-40 grayscale" />
                 </div>
                 <h2 className="font-['Geist',sans-serif] text-5xl font-semibold text-foreground tracking-tight">
                   Ask anything

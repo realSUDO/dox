@@ -1,124 +1,109 @@
-# Dox - Advanced RAG Workspace
+<div align="center">
+  <br />
+  <a href="https://dox.sud-o.app">
+    <img src="./apps/web/public/dox.svg" alt="Dox Logo" width="120" />
+  </a>
+  <br />
+  
+  <h1>Dox</h1>
+  <p><b><a href="https://dox.sud-o.app">dox.sud-o.app</a></b></p>
 
-Dox is a powerful, production-ready **Retrieval-Augmented Generation (RAG)** workspace. It allows users to create "Leafs" (workspaces), upload various sources (PDFs, Markdown, Videos/Audio via VTT/SRT, Web Links, and full Codebase ZIPs), and interact with them using conversational AI. 
+  <img src="https://readme-typing-svg.herokuapp.com?font=Inter&weight=500&size=20&pause=1000&color=144637&center=true&vCenter=true&width=600&lines=The+Intelligent+Knowledge+Workspace;Semantic+Search+for+Your+Documents;Built+for+Speed+and+Clarity" alt="Typing SVG" />
+  
+  <p>
+    <b>Transform your scattered documents into a cohesive, instantly searchable semantic engine.</b>
+  </p>
 
-The system features an asynchronous distributed ingestion pipeline, robust guardrails, and an intelligent ZIP evaluation agent.
+  <p>
+    <a href="https://dox.sud-o.app"><img src="https://img.shields.io/badge/Live_Preview-dox.sud--o.app-144637?style=for-the-badge&logo=vercel" alt="Live Demo" /></a>
+    <img src="https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript" />
+    <img src="https://img.shields.io/badge/Next.js-000000?style=for-the-badge&logo=nextdotjs&logoColor=white" alt="Next.js" />
+    <img src="https://img.shields.io/badge/tRPC-2596BE?style=for-the-badge&logo=trpc&logoColor=white" alt="tRPC" />
+    <img src="https://img.shields.io/badge/Prisma-2D3748?style=for-the-badge&logo=prisma&logoColor=white" alt="Prisma" />
+  </p>
+</div>
 
----
+<br />
 
-## 🏗 Tech Stack
+## About Dox
 
-| Layer | Technology |
-|---|---|
-| **Monorepo** | Turborepo + pnpm workspaces |
-| **Frontend** | Next.js (App Router), React, Tailwind CSS, shadcn/ui |
-| **Backend API** | Express + tRPC (Type-safe RPCs) |
-| **Authentication** | Clerk (`@clerk/nextjs`, `@clerk/express`) |
-| **Database** | PostgreSQL via **Prisma ORM** |
-| **Vector Database** | Qdrant |
-| **Queue/Workers** | BullMQ + Valkey (Redis) |
-| **Storage** | S3 API / DigitalOcean Spaces |
-| **AI / LLMs** | OpenAI (Embeddings & Chat Completions) |
+Dox is a premium knowledge management workspace designed for modern engineering and research teams. Built with exceptional attention to detail, Dox allows you to upload PDFs, text files, and web links, and instantly synthesizes them into an intelligent, conversational interface. 
 
----
+Rather than relying on basic keyword matching, Dox utilizes state-of-the-art vector embeddings to understand the semantic intent behind your queries. We built Dox for absolute speed, clarity, and reliability.
 
-## 📂 Project Structure
+## Features
 
-```text
-.
-├── apps/
-│   ├── api/          # Express Server (tRPC) & BullMQ Ingestion Workers
-│   └── web/          # Next.js Frontend (UI & TRPC Client)
-└── packages/
-    ├── database/     # Prisma schema, migrations, and db client
-    ├── services/     # Core Business Logic (Queues, Extraction, RAG, Qdrant, Auth)
-    ├── trpc/         # Shared tRPC routers, API Context, Zod schemas
-    ├── logger/       # Shared Winston logging configuration
-    └── typescript-config/ 
-```
+* **Intelligent Semantic Search:** Converse with your documents in natural language. Our custom chunking and embedding pipelines ensure highly accurate context retrieval.
+* **Premium User Experience:** A meticulously crafted, responsive interface featuring dynamic loading states, asymptotic progress curves, and seamless dark mode support.
+* **Real-time Processing:** Upload large documents and watch as background workers extract, chunk, and index your knowledge in seconds.
+* **Modular Workspaces (Leafs):** Isolate contexts into separate 'Leafs', allowing specialized AI interactions for different projects or domains.
+* **Scalable Architecture:** Engineered with a robust monorepo structure, separating the Next.js frontend, Node.js background workers, and PostgreSQL/Prisma database layers.
 
----
+## Technology Stack
 
-## 🧠 Core Architecture & Pipelines
+Dox relies on a cutting-edge, type-safe ecosystem:
 
-### 1. The Ingestion Pipeline (BullMQ)
-Document ingestion is decoupled from the main API thread using a robust BullMQ pipeline. 
+* **Frontend:** Next.js (App Router), React, Tailwind CSS v4, Framer Motion
+* **Backend:** Node.js, tRPC, Prisma ORM
+* **Data Storage:** PostgreSQL (Relational), Qdrant (Vector Database), Valkey/Redis (Queueing)
+* **Infrastructure:** DigitalOcean Spaces (S3-compatible blob storage), Docker, Turborepo
 
-1. **Upload**: User uploads a file via pre-signed S3 URL.
-2. **Extract Queue**: Downloads the file, parses text based on mimetype (PDF, SRT, VTT, HTML). 
-3. **Chunk Queue**: Applies intelligent chunking (sliding window for transcripts, recursive splitting for text/PDFs).
-4. **Embed Queue**: Batches chunks, fetches OpenAI embeddings, and indexes them into Qdrant.
-5. **OCR Queue** (Images/Scans): Routes image files to an OCR worker before chunking.
+## System Architecture
 
-### 2. Intelligent ZIP Processing
-When a user uploads a `.zip` file (e.g., a codebase or massive dataset):
-- The `extract` worker extracts all valid text/code files, skipping unsupported binaries without crashing.
-- An **AI Evaluator** (GPT-4o) analyzes the directory tree and file contents.
-- It generates a **Repository Summary** and an **Approval Recommendation**.
-- The pipeline pauses in a `pending_approval` state.
-- The user reviews the AI's recommendation and explicitly approves the dataset in the UI before it is chunked and embedded.
-- The repository summary is prepended to every chunk (e.g., `[Leaf Summary: ...]`) to preserve global context for the RAG retriever.
+<div align="center">
+  <img src="https://raw.githubusercontent.com/tandpfun/skill-icons/main/icons/NextJS-Dark.svg" width="48" alt="Next.js" />
+  <img src="https://raw.githubusercontent.com/tandpfun/skill-icons/main/icons/TypeScript.svg" width="48" alt="TypeScript" />
+  <img src="https://raw.githubusercontent.com/tandpfun/skill-icons/main/icons/TailwindCSS-Dark.svg" width="48" alt="Tailwind CSS" />
+  <img src="https://raw.githubusercontent.com/tandpfun/skill-icons/main/icons/NodeJS-Dark.svg" width="48" alt="Node.js" />
+  <img src="https://raw.githubusercontent.com/tandpfun/skill-icons/main/icons/PostgreSQL-Dark.svg" width="48" alt="PostgreSQL" />
+  <img src="https://raw.githubusercontent.com/tandpfun/skill-icons/main/icons/Docker.svg" width="48" alt="Docker" />
+</div>
 
-### 3. RAG Retrieval & Guardrails
-- **RRF (Reciprocal Rank Fusion)**: Multi-stage retrieval using dense vector search.
-- **Context Builder**: Formats the retrieved chunks with citation metadata.
-- **Guardrails**: Input and output guardrails to detect prompt injection, PII, and policy violations.
+<br />
 
----
+## Getting Started
 
-## 🚀 Getting Started Locally
+To run the Dox environment locally, you will need Node.js, pnpm, and Docker installed on your machine.
 
-### 1. Prerequisites
-- **Node.js** ≥ 18
-- **pnpm** ≥ 9
-- **Docker** (for running PostgreSQL, Valkey, and Qdrant locally)
-- Accounts for **Clerk** (Auth) and **OpenAI** (LLM)
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/your-org/dox.git
+   cd dox
+   ```
 
-### 2. Install Dependencies
-```bash
-pnpm install
-```
+2. **Install dependencies**
+   ```bash
+   pnpm install
+   ```
 
-### 3. Environment Variables
-Copy the `.env.example` file to `.env`:
-```bash
-cp .env.example .env
-```
-Fill in the necessary keys (specifically `OPENAI_API_KEY`, `CLERK_SECRET_KEY`, `CLERK_PUBLISHABLE_KEY`, and S3/Spaces credentials).
-Run the setup script to symlink the `.env` across workspaces:
-```bash
-bash setup.sh
-```
+3. **Configure Environment**
+   Copy the example environment files and fill in your necessary API keys (OpenAI, Clerk, DigitalOcean Spaces).
+   ```bash
+   cp .env.example .env
+   ```
 
-### 4. Start Local Infrastructure
-Use Docker Compose to spin up Postgres, Valkey (Redis), and Qdrant:
-```bash
-docker-compose up -d
-```
+4. **Start Infrastructure**
+   Launch the required databases (PostgreSQL, Qdrant, Valkey) using Docker Compose.
+   ```bash
+   docker compose up -d
+   ```
 
-### 5. Setup the Database
-Sync the Prisma schema to the database:
-```bash
-pnpm db:push
-```
+5. **Run the Development Server**
+   Start the Turborepo development pipeline.
+   ```bash
+   pnpm dev
+   ```
 
-### 6. Run the Application
-Start the Next.js frontend and Express/Worker backend in parallel via Turborepo:
-```bash
-pnpm dev
-```
+Visit `http://localhost:3000` to interact with your local instance.
 
-| Service | Local URL |
-|---|---|
-| Next.js App | http://localhost:3000 |
-| Express API / TRPC | http://localhost:8000/trpc |
+## Deployment
+
+Dox is fully containerized for production deployment. The repository includes `docker-compose.prod.yml` and highly optimized, multi-stage Dockerfiles for both the API workers and the Next.js web client.
+
+For a live demonstration of the production environment, visit [dox.sud-o.app](https://dox.sud-o.app).
 
 ---
 
-## 🛠 Useful Commands
-
-- `pnpm dev` - Start development servers
-- `pnpm build` - Build all packages and apps for production
-- `pnpm db:push` - Sync Prisma schema to database (development)
-- `pnpm db:generate` - Generate Prisma Client
-- `pnpm db:studio` - Open Prisma Studio to view the database
+<div align="center">
+  <i>Engineered for clarity. Built for the future.</i>
+</div>
