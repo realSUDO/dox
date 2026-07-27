@@ -4,6 +4,7 @@ import { db } from "@repo/database";
 import { valkeyConnection } from "@repo/services/connection";
 import { embeddingService } from "@repo/services/embedding";
 import { qdrantService } from "@repo/services/qdrant";
+import { creditService } from "@repo/services/credits";
 import type { EmbedBatchJobData } from "@repo/services/queues";
 
 export const embedWorker = new Worker<EmbedBatchJobData>(
@@ -28,12 +29,24 @@ export const embedWorker = new Worker<EmbedBatchJobData>(
 
     // ── 2. Embed all chunk texts in one batched call ───────────────────────────
     const texts = chunks.map((c) => c.content);
-    const vectors = await embeddingService.embedBatch(texts);
+    const { vectors, totalTokens } = await embeddingService.embedBatch(texts);
 
     if (vectors.length !== chunks.length) {
       throw new Error(
         `[embed-worker] Vector count mismatch: got ${vectors.length}, expected ${chunks.length}`,
       );
+    }
+
+    // ── 2.5 Deduct Credits ──────────────────────────────────────────────────
+    const leaf = await db.leaf.findUnique({ where: { id: leafId }, select: { ownerId: true } });
+    if (leaf && totalTokens > 0) {
+      try {
+        await creditService.deductTokens(leaf.ownerId, totalTokens);
+        logger.info(`[embed-worker] Deducted ${totalTokens} tokens from user ${leaf.ownerId}`);
+      } catch (e: any) {
+        logger.error(`[embed-worker] Failed to deduct credits: ${e.message}`);
+        throw new Error(`Out of credits: ${e.message}`);
+      }
     }
 
     // ── 3. Ensure Qdrant collection exists ────────────────────────────────────

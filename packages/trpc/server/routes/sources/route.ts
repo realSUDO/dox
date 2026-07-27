@@ -136,4 +136,22 @@ export const sourcesRouter = router({
       );
       return { url };
     }),
+
+  getChunk: protectedProcedure
+    .input(z.object({ chunkId: z.string().uuid() }))
+    .query(async ({ input, ctx }) => {
+      const chunk = await ctx.db.chunk.findUnique({
+        where: { id: input.chunkId },
+        include: { source: true },
+      });
+
+      if (!chunk) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Chunk not found" });
+      }
+
+      const { projectService } = await import("@repo/services");
+      await projectService.assertMembership(ctx.user.id, chunk.leafId, ["viewer", "editor", "owner"]);
+
+      return chunk;
+    }),
 });

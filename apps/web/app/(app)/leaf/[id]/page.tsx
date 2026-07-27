@@ -166,7 +166,13 @@ export default function LeafPage() {
       utils.chat.listSessions.invalidate();
     },
     onError: (error: any) => {
-      toast.error(error.message || "Failed to process query");
+      if (error.message?.includes("OUT_OF_CREDITS")) {
+        toast.error("You don't have enough credits to ask this question! Please upgrade your plan.", {
+          duration: 5000,
+        });
+      } else {
+        toast.error(error.message || "Failed to process query");
+      }
       // Revert the optimistic message on error
       setMessages((prev) => prev.slice(0, -1));
     },

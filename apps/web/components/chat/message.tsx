@@ -3,50 +3,28 @@
 import React from "react";
 import { CitationChip } from "./citation-chip";
 import { cn } from "~/lib/utils";
-import { User, Bot } from "lucide-react";
 import { RouterOutputs } from "@repo/trpc/client";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
-// Get citation type from the query output
 type CitationPayload = RouterOutputs["chat"]["query"]["citations"][number];
 
 interface MessageProps {
   role: "user" | "assistant" | "system";
   content: string;
   citations?: CitationPayload[];
+  onCitationClick?: (citation: { index: number; displayLabel?: string | null; sourceId: string; chunkId: string }) => void;
 }
 
-export function ChatMessage({ role, content, citations = [] }: MessageProps) {
+export function ChatMessage({ role, content, citations = [], onCitationClick }: MessageProps) {
   if (role === "system") return null;
 
   const isUser = role === "user";
 
-  // Parse [Source N] and replace with CitationChip
-  const renderContent = () => {
+  const preProcessedContent = React.useMemo(() => {
     if (isUser || !citations.length) return content;
-
-    const parts = content.split(/(\[Source\s+\d+\])/g);
-
-    return parts.map((part, i) => {
-      const match = part.match(/\[Source\s+(\d+)\]/);
-      if (match && match[1]) {
-        const idx = parseInt(match[1], 10);
-        const citation = citations.find((c) => c.index === idx);
-        
-        if (citation) {
-          return (
-            <CitationChip
-              key={i}
-              index={idx}
-              displayLabel={citation.displayLabel}
-              sourceId={citation.sourceId}
-              chunkId={citation.chunkId}
-            />
-          );
-        }
-      }
-      return <span key={i}>{part}</span>;
-    });
-  };
+    return content.replace(/\[Source\s+(\d+)\]/g, (match, idx) => `[${match}](#citation-${idx})`);
+  }, [content, citations, isUser]);
 
   return (
     <div className="flex w-full px-4 py-4 text-sm">
@@ -72,7 +50,37 @@ export function ChatMessage({ role, content, citations = [] }: MessageProps) {
             "prose prose-sm max-w-none break-words leading-relaxed",
             isUser ? "text-primary-foreground prose-invert" : "text-foreground"
           )}>
-            {renderContent()}
+            {isUser ? (
+              <p className="whitespace-pre-wrap m-0">{content}</p>
+            ) : (
+              <ReactMarkdown 
+                remarkPlugins={[remarkGfm]}
+                components={{
+                  a({ node, href, children, ...props }) {
+                    if (href?.startsWith("#citation-")) {
+                      const idxStr = href.replace("#citation-", "");
+                      const idx = parseInt(idxStr, 10);
+                      const citation = citations.find((c) => c.index === idx);
+                      
+                      if (citation) {
+                        return (
+                          <CitationChip
+                            index={idx}
+                            displayLabel={citation.displayLabel}
+                            sourceId={citation.sourceId}
+                            chunkId={citation.chunkId}
+                            onClick={onCitationClick}
+                          />
+                        );
+                      }
+                    }
+                    return <a href={href} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline font-medium" {...props}>{children}</a>;
+                  }
+                }}
+              >
+                {preProcessedContent}
+              </ReactMarkdown>
+            )}
           </div>
         </div>
       </div>

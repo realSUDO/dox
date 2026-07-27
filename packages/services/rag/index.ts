@@ -8,6 +8,7 @@ import { generator, GenerationResult } from "./generator";
 import { logger } from "@repo/logger";
 import { db } from "@repo/database";
 import { guardrailService } from "../guardrails";
+import { creditService } from "../credits";
 
 export interface RAGQueryOptions {
   leafId: string;
@@ -29,6 +30,12 @@ export class RAGService {
    */
   async query(options: RAGQueryOptions): Promise<RAGResponse> {
     logger.info(`[RAGService] Starting pipeline for query: "${options.query}" (Leaf: ${options.leafId})`);
+
+    // 0. Pre-check Credits
+    const hasEnough = await creditService.hasEnoughTokens(options.userId, 1000); // require at least 1k tokens to start
+    if (!hasEnough) {
+      throw new Error("OUT_OF_CREDITS");
+    }
 
     // 1. Fetch Chat History (if session exists)
     let chatSessionId = options.chatSessionId;
@@ -175,6 +182,17 @@ export class RAGService {
           displayLabel: c.displayLabel,
         })),
       });
+    }
+
+    // 10. Deduct Credits
+    const totalTokens = generation.usage.promptTokens + generation.usage.completionTokens;
+    if (totalTokens > 0) {
+      try {
+        await creditService.deductTokens(options.userId, totalTokens);
+        logger.info(`[RAGService] Deducted ${totalTokens} tokens from user ${options.userId}`);
+      } catch (e: any) {
+        logger.error(`[RAGService] Failed to deduct credits post-generation: ${e.message}`);
+      }
     }
 
     logger.info(`[RAGService] Pipeline complete. Generated ${generation.citations.length} citations.`);

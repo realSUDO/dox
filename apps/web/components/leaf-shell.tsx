@@ -75,6 +75,7 @@ export function LeafShell({
   const pathname = usePathname();
 
   const { data: leaf } = trpc.leafs.get.useQuery({ id: leafId });
+  const { data: user } = trpc.auth.me.useQuery();
 
   // Handle responsive behavior
   useEffect(() => {
@@ -110,6 +111,11 @@ export function LeafShell({
           </div>
           
           <div className="flex items-center gap-4">
+            <div className="flex items-center gap-1 text-sm font-medium text-muted-foreground mr-2 bg-accent/50 px-3 py-1.5 rounded-full" title="Token Balance">
+              {user && user.tokenBalance !== undefined 
+                ? `${(user.tokenBalance / 1000).toFixed(1)} / 50.0` 
+                : "..."}
+            </div>
             <ThemeToggle />
             <div className="ml-2">
               <UserButton afterSignOutUrl="/" />
@@ -146,17 +152,12 @@ export function LeafShell({
               <Database size={24} />
               Knowledge Base
             </Link>
-            <Link 
-              href={`/leaf/${leafId}/manage`}
-              className={`flex items-center gap-4 p-4 rounded-lg text-sm font-medium transition-all duration-200 ${
-                pathname.endsWith('/manage') 
-                  ? 'bg-[#bbeed2] text-[#3f6e57]' 
-                  : 'text-muted-foreground hover:bg-accent'
-              }`}
-            >
-              <Settings size={24} />
-              Manage Leaf
-            </Link>
+            <div className="relative group cursor-default" title="Coming soon">
+              <div className="flex items-center gap-4 p-4 rounded-lg text-sm font-medium transition-all duration-200 text-muted-foreground/40 group-hover:bg-accent/50 pointer-events-none">
+                <Settings size={24} />
+                Manage Leaf
+              </div>
+            </div>
             
             <div className="py-2 px-2">
               <div className="w-full h-px bg-[#c0c9c3]/50"></div>
@@ -176,24 +177,6 @@ export function LeafShell({
             
             <ChatList leafId={leafId} currentPath={pathname} />
           </nav>
-
-          {/* Footer Tabs */}
-          <div className="mt-auto pt-6 border-t border-border/30 flex flex-col gap-2">
-            <Link 
-              href="#"
-              className="flex items-center gap-4 px-4 py-2 text-muted-foreground hover:bg-accent rounded-lg text-sm font-medium transition-all"
-            >
-              <HelpCircle size={24} />
-              Help
-            </Link>
-            <Link 
-              href="#"
-              className="flex items-center gap-4 px-4 py-2 text-muted-foreground hover:bg-accent rounded-lg text-sm font-medium transition-all"
-            >
-              <MessageSquare size={24} />
-              Feedback
-            </Link>
-          </div>
         </div>
       </aside>
 

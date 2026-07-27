@@ -35,6 +35,7 @@ export default function DashboardPage() {
 
   const utils = trpc.useUtils();
   const { data: leafs, isLoading } = trpc.leafs.list.useQuery();
+  const { data: user } = trpc.auth.me.useQuery();
 
   const createMutation = trpc.leafs.create.useMutation({
     onSuccess: (data) => {
@@ -66,7 +67,7 @@ export default function DashboardPage() {
 
         <div className="flex flex-col h-full p-4 pt-6">
           <nav className="flex-1 space-y-1">
-            <Link href="/" className="flex items-center gap-4 p-4 bg-[#bbeed2] text-[#3f6e57] rounded-lg font-medium text-sm transition-colors">
+            <Link href="/dashboard" className="flex items-center gap-4 p-4 bg-[#bbeed2] text-[#3f6e57] rounded-lg font-medium text-sm transition-colors">
               <Home size={24} />
               Home
             </Link>
@@ -90,7 +91,11 @@ export default function DashboardPage() {
             <UserButton afterSignOutUrl="/" />
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium truncate">My Workspace</p>
-              <p className="text-xs text-muted-foreground truncate">Free Plan</p>
+              <p className="text-xs text-muted-foreground truncate flex items-center gap-1">
+                {user && user.tokenBalance !== undefined 
+                  ? `${(user.tokenBalance / 1000).toFixed(1)} / 50.0 Credits` 
+                  : "..."}
+              </p>
             </div>
           </div>
         </div>

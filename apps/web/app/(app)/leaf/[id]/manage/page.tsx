@@ -65,8 +65,8 @@ export default function LeafDetailPage({ params }: { params: Promise<{ id: strin
     <div className="container mx-auto py-10 max-w-5xl space-y-8 mt-16 px-6">
       <div className="flex justify-between items-start">
         <div>
-          <Link href="/" className="text-sm text-muted-foreground hover:underline mb-2 block">
-            &larr; Back to dashboard
+          <Link href="/dashboard" className="text-sm text-muted-foreground hover:underline mb-2 block">
+            &larr; Back to Dashboard
           </Link>
           <h1 className="text-3xl font-bold tracking-tight">{leaf.name}</h1>
           {leaf.description && <p className="text-muted-foreground mt-2">{leaf.description}</p>}

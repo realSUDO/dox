@@ -41,6 +41,9 @@ export const userSchema = z.object({
   email: z.string().email(),
   displayName: z.string().nullable(),
   role: z.string(),
+  createdAt: z.date(),
+  updatedAt: z.date(),
+  tokenBalance: z.number(),
 });
 
 export type AuthUser = z.infer<typeof userSchema>;

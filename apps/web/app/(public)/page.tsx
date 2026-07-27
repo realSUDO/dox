@@ -96,12 +96,12 @@ export default function IntroPage() {
           <span className="font-semibold text-2xl tracking-tight">Dox</span>
         </div>
         <div>
-          <SignInButton forceRedirectUrl="/">
+          <SignInButton forceRedirectUrl="/dashboard">
             <Button variant="ghost" className="font-medium hover:bg-accent text-foreground mr-2">
               Log in
             </Button>
           </SignInButton>
-          <SignUpButton forceRedirectUrl="/">
+          <SignUpButton forceRedirectUrl="/dashboard">
             <Button className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm font-medium">
               Get Started
             </Button>
@@ -151,7 +151,7 @@ export default function IntroPage() {
           </motion.p>
 
           <motion.div variants={itemVariants} className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <SignUpButton forceRedirectUrl="/">
+            <SignUpButton forceRedirectUrl="/dashboard">
               <Button size="lg" className="bg-primary hover:bg-primary/90 text-primary-foreground h-14 px-8 text-lg rounded-xl shadow-lg hover:shadow-xl transition-all group">
                 Start Building Free
                 <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />

@@ -17,6 +17,8 @@ model User {
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
+  tokenBalance Int      @default(50000) @map("token_balance")
+
   sessions        Session[]
   ownedLeafs      Leaf[]
   leafMembers     LeafMember[]

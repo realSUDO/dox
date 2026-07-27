@@ -58,8 +58,8 @@ export class EmbeddingService {
    * Returns a 1536-dim float32 vector.
    */
   async embedSingle(text: string): Promise<number[]> {
-    const results = await this.embedBatch([text]);
-    const first = results[0];
+    const { vectors } = await this.embedBatch([text]);
+    const first = vectors[0];
     if (!first) throw new Error("EmbeddingService: no vector returned for single embed");
     return first;
   }
@@ -68,10 +68,11 @@ export class EmbeddingService {
    * Embed an array of texts in batches that respect OpenAI's token limit.
    * Returns vectors in the same order as the input texts.
    */
-  async embedBatch(texts: string[]): Promise<number[][]> {
-    if (texts.length === 0) return [];
+  async embedBatch(texts: string[]): Promise<{ vectors: number[][]; totalTokens: number }> {
+    if (texts.length === 0) return { vectors: [], totalTokens: 0 };
 
     const results: number[][] = new Array(texts.length);
+    let totalTokens = 0;
 
     // Split texts into sub-batches that fit within the character limit
     const batches: Array<{ indices: number[]; texts: string[] }> = [];
@@ -126,11 +127,16 @@ export class EmbeddingService {
         }
         results[idx] = embedding.embedding;
       }
+      
+      // Track token usage for credits
+      if (response.usage && response.usage.prompt_tokens) {
+        totalTokens += response.usage.prompt_tokens;
+      }
     });
 
     await Promise.all(batchPromises);
 
-    return results;
+    return { vectors: results, totalTokens };
   }
 
   /** Returns the vector dimension this model produces. */

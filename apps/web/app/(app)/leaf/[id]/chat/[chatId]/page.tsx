@@ -11,6 +11,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { RouterOutputs } from "@repo/trpc/client";
 import { UploadCloud } from "lucide-react";
 import { FilePill } from "~/components/chat/file-pill";
+import { CitationPreview } from "~/components/chat/citation-preview";
 
 type ChatHistoryMsg = {
   id: string;
@@ -31,6 +32,12 @@ export default function ChatSessionPage({ params }: { params: Promise<{ id: stri
   const [uploadingFiles, setUploadingFiles] = useState<{ id: string; name: string; status: 'uploading' | 'processing' | 'pending_approval' | 'success' | 'error'; sourceId?: string; errorMessage?: string }[]>([]);
   const [showLinkInput, setShowLinkInput] = useState(false);
   const [inlineLinkUrl, setInlineLinkUrl] = useState("");
+  const [selectedCitation, setSelectedCitation] = useState<{
+    index: number;
+    displayLabel?: string | null;
+    sourceId: string;
+    chunkId: string;
+  } | null>(null);
 
   const { data: session, isLoading: isSessionLoading } = trpc.chat.getSession.useQuery(
     { chatSessionId },
@@ -43,7 +50,13 @@ export default function ChatSessionPage({ params }: { params: Promise<{ id: stri
       utils.chat.getSession.invalidate({ chatSessionId });
     },
     onError: (error: any) => {
-      toast.error(error.message || "Failed to process query");
+      if (error.message?.includes("OUT_OF_CREDITS")) {
+        toast.error("You don't have enough credits to ask this question! Please upgrade your plan.", {
+          duration: 5000,
+        });
+      } else {
+        toast.error(error.message || "Failed to process query");
+      }
     },
   });
 
@@ -228,13 +241,15 @@ export default function ChatSessionPage({ params }: { params: Promise<{ id: stri
 
   return (
     <div 
-      className="flex flex-col h-full relative w-full"
+      className="flex flex-row h-full relative w-full overflow-hidden"
       onDragEnter={handleDragEnter}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
     >
-      <AnimatePresence>
+      {/* Main Chat Area */}
+      <div className="flex-1 flex flex-col relative h-full min-w-0 transition-all duration-300">
+        <AnimatePresence>
         {isDragging && (
           <motion.div 
             initial={{ opacity: 0 }}
@@ -264,6 +279,7 @@ export default function ChatSessionPage({ params }: { params: Promise<{ id: stri
                 role={msg.role}
                 content={msg.content}
                 citations={msg.citations || []}
+                onCitationClick={setSelectedCitation}
               />
             ))}
             {queryMutation.isPending && (
@@ -283,6 +299,28 @@ export default function ChatSessionPage({ params }: { params: Promise<{ id: stri
           </div>
         )}
       </div>
+
+      {/* Right Sidebar for Citation Preview */}
+      <AnimatePresence>
+        {selectedCitation && (
+          <motion.div
+            initial={{ width: 0, opacity: 0 }}
+            animate={{ width: 380, opacity: 1 }}
+            exit={{ width: 0, opacity: 0 }}
+            transition={{ type: "spring", bounce: 0, duration: 0.4 }}
+            className="h-full shrink-0 z-40 hidden md:block border-l border-border bg-background"
+          >
+            <div className="w-[380px] h-full">
+              <CitationPreview
+                chunkId={selectedCitation.chunkId}
+                sourceId={selectedCitation.sourceId}
+                index={selectedCitation.index}
+                onClose={() => setSelectedCitation(null)}
+              />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Floating Bottom Composer */}
       <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center w-full max-w-3xl px-4 md:px-0 z-50">
@@ -406,6 +444,8 @@ export default function ChatSessionPage({ params }: { params: Promise<{ id: stri
             </button>
           </div>
         </motion.div>
+      </div>
+      {/* End Main Chat Area */}
       </div>
     </div>
   );
