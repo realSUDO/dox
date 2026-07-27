@@ -39,7 +39,8 @@ export class Generator {
     context: AssembledContext,
     chatHistory: { role: "user" | "assistant"; content: string }[],
     expectedLength: "short" | "medium" | "long" = "medium",
-    projectContext: string = ""
+    projectContext: string = "",
+    onToken?: (token: string, isThinking: boolean) => void
   ): Promise<GenerationResult> {
     const lengthInstruction = {
       short: "Keep your answer brief, concise, and to the point (1-3 sentences).",
@@ -51,6 +52,9 @@ export class Generator {
 Answer ONLY using the sources below. Never use prior knowledge.
 If the answer is not in the sources, say "I couldn't find this in the provided sources."
 
+The user wants to see your reasoning process. You MUST start your response with a <think> block where you reason about the sources and plan your answer.
+Then, close the </think> tag and provide your final synthesized answer.
+
 Leaf Global Context (For background understanding only, do NOT cite these):
 ${projectContext || "None provided"}
 
@@ -58,6 +62,7 @@ ${lengthInstruction}
 
 CITATION RULES:
 - Cite every claim using [Source N] format (e.g., [Source 1], [Source 2]). Do NOT use formats like (r1) or [1].
+- If the user asks "what is on page X" or "summarize page X", and you are provided with a source for that page, summarize its contents instead of saying you couldn't find the answer.
 - CRITICAL: When citing timed media (videos/audio), you MUST explicitly write the timestamp, title, and directory hierarchy (if available) into the text. Do not omit the timestamp even if you are citing multiple sources.
   Example: "This is covered at 00:02:52 in 'Catch All Route Segments' (Module 4) [Source 3]."
 - If synthesizing multiple video steps, you can format them cleanly:
@@ -75,13 +80,14 @@ To use libraries not supported in Expo Go, you need a development build...
 
 Question: How do I use unsupported libraries in Expo Go?
 
-Answer: To use libraries that are not supported in Expo Go, you need to create a development build. This is explained at 00:05:23 in "What Is EAS Build" (module 10) [Source 1].`;
+Answer: <think>The user is asking about unsupported libraries in Expo Go. Source 1 states that to use these libraries, a development build is needed. I will synthesize this and cite Source 1.</think>
+To use libraries that are not supported in Expo Go, you need to create a development build. This is explained at 00:05:23 in "What Is EAS Build" (module 10) [Source 1].`;
 
     const userPrompt = `${context.contextString}\n\nQuestion: ${query}`;
 
     logger.debug("[Generator] Calling LLM for generation...");
 
-    const response = await openai.chat.completions.create({
+    const stream = await openai.chat.completions.create({
       model: env.GENERATION_MODEL || "gpt-4o-mini",
       messages: [
         { role: "system", content: systemPrompt },
@@ -90,10 +96,26 @@ Answer: To use libraries that are not supported in Expo Go, you need to create a
       ],
       temperature: 0.2,
       max_tokens: 1024,
+      stream: true,
+      stream_options: { include_usage: true },
     });
 
-    const answer = response.choices[0]?.message?.content || "I couldn't find relevant information in the provided sources.";
-    const usage = response.usage || { prompt_tokens: 0, completion_tokens: 0 };
+    let answer = "";
+    let usage = { prompt_tokens: 0, completion_tokens: 0 };
+
+    for await (const chunk of stream) {
+      if (chunk.usage) {
+        usage = chunk.usage;
+      }
+      
+      const contentChunk = chunk.choices[0]?.delta?.content;
+      if (contentChunk) {
+        answer += contentChunk;
+        if (onToken) onToken(contentChunk, false);
+      }
+    }
+    
+    if (!answer) answer = "I couldn't find relevant information in the provided sources.";
 
     // Parse citations [Source N] from the text
     const citations: CitationPayload[] = [];

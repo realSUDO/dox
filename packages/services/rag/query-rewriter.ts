@@ -16,6 +16,7 @@ export const QueryRewriteSchema = z.object({
   stepBackQuery: z.string().describe("A broader, more abstract version of the query to capture general concepts"),
   subQueries: z.array(z.string()).describe("Independent sub-queries if the original asks multiple things or uses conjunctions. Empty if simple."),
   hydePassage: z.string().describe("A 1-2 sentence hypothetical answer to the query to be used for dense embedding retrieval"),
+  pageNumberFilter: z.number().nullable().describe("If the user explicitly asks for a specific page number, extract it here. Otherwise, leave null."),
 });
 
 export type QueryRewriteResult = z.infer<typeof QueryRewriteSchema>;
@@ -34,6 +35,7 @@ Given the user's query and chat history:
 4. Generate a step-back question (broader concept)
 5. Decompose into sub-queries if complex
 6. Write a 1-2 sentence hypothetical answer (HyDE)
+7. Extract a specific page number if the user is asking about one (e.g. "what is on page 40" -> 40)
 
 User Query: ${query}
 
@@ -61,7 +63,8 @@ ${projectContext || "None"}`;
   - Rewritten Query: "${parsed.rewrittenQuery}"
   - Step-back Query: "${parsed.stepBackQuery}"
   - Sub-queries: ${parsed.subQueries.length > 0 ? JSON.stringify(parsed.subQueries) : "None"}
-  - HyDE Passage: "${parsed.hydePassage}"`);
+  - HyDE Passage: "${parsed.hydePassage}"
+  - Page Filter: ${parsed.pageNumberFilter ?? "None"}`);
 
     return parsed;
   }

@@ -37,45 +37,43 @@ export default function ChatSessionPage({ params }: { params: Promise<{ id: stri
     displayLabel?: string | null;
     sourceId: string;
     chunkId: string;
+    score?: number | null;
   } | null>(null);
+  const [activeAssistantMessageId, setActiveAssistantMessageId] = useState<string | null>(null);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [sidebarWidth, setSidebarWidth] = useState(380);
+  const isResizing = useRef(false);
+  const [isResizingState, setIsResizingState] = useState(false);
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isResizing.current) return;
+      const newWidth = window.innerWidth - e.clientX;
+      if (newWidth > 300 && newWidth < 1000) {
+        setSidebarWidth(newWidth);
+      }
+    };
+    const handleMouseUp = () => {
+      if (isResizing.current) {
+        isResizing.current = false;
+        setIsResizingState(false);
+        document.body.style.cursor = 'default';
+        document.body.style.userSelect = 'auto';
+      }
+    };
+
+    document.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("mouseup", handleMouseUp);
+    return () => {
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, []);
 
   const { data: session, isLoading: isSessionLoading } = trpc.chat.getSession.useQuery(
     { chatSessionId },
     { refetchOnWindowFocus: false }
   );
-
-  const queryMutation = trpc.chat.query.useMutation({
-    onSuccess: (data: any) => {
-      // Smoothly append the assistant message without reloading the session
-      utils.chat.getSession.setData({ chatSessionId }, (oldData: any) => {
-        if (!oldData) return oldData;
-        return {
-          ...oldData,
-          messages: [
-            ...oldData.messages,
-            {
-              id: data.messageId,
-              chatSessionId,
-              role: "assistant",
-              content: data.answer,
-              thoughtProcess: data.thoughtProcess,
-              createdAt: new Date().toISOString(),
-              citations: data.citations || [],
-            }
-          ]
-        };
-      });
-    },
-    onError: (error: any) => {
-      if (error.message?.includes("OUT_OF_CREDITS")) {
-        toast.error("You don't have enough credits to ask this question! Please upgrade your plan.", {
-          duration: 5000,
-        });
-      } else {
-        toast.error(error.message || "Failed to process query");
-      }
-    },
-  });
 
   const utils = trpc.useUtils();
   const getUploadUrlMutation = trpc.sources.requestUploadUrl.useMutation();
@@ -183,13 +181,17 @@ export default function ChatSessionPage({ params }: { params: Promise<{ id: stri
     });
   };
 
-  const handleSend = () => {
-    if (!input.trim() || queryMutation.isPending) return;
+  const handleSend = async () => {
+    if (!input.trim() || isGenerating) return;
 
     const userMsg = input.trim();
     setInput("");
+    setIsGenerating(true);
 
-    // Optimistically update the cache to show user message instantly
+    const newAssistantMessageId = crypto.randomUUID();
+    setActiveAssistantMessageId(newAssistantMessageId);
+
+    // Optimistically update the cache to show user message and empty assistant message instantly
     utils.chat.getSession.setData({ chatSessionId }, (oldData: any) => {
       if (!oldData) return oldData;
       return {
@@ -203,15 +205,98 @@ export default function ChatSessionPage({ params }: { params: Promise<{ id: stri
             content: userMsg,
             createdAt: new Date(),
           },
+          {
+            id: newAssistantMessageId,
+            chatSessionId,
+            role: "assistant",
+            content: "",
+            thoughtProcess: [],
+            createdAt: new Date().toISOString(),
+            citations: [],
+          }
         ],
       };
     });
 
-    queryMutation.mutate({
-      leafId,
-      query: userMsg,
-      chatSessionId,
-    });
+    try {
+      const res = await fetch("/api/chat/stream", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          leafId,
+          query: userMsg,
+          chatSessionId,
+          assistantMessageId: newAssistantMessageId,
+        }),
+      });
+
+      if (!res.ok) {
+        throw new Error(await res.text());
+      }
+
+      if (!res.body) throw new Error("No response body");
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      let currentContent = "";
+      let currentThoughtProcess: any[] = [];
+      let isThinking = false;
+      let currentThinkBlock = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const parts = buffer.split("\n\n");
+        buffer = parts.pop() || "";
+
+        for (const part of parts) {
+          if (part.startsWith("data: ")) {
+            const dataStr = part.slice(6);
+            try {
+              const event = JSON.parse(dataStr);
+              if (event.type === "progress") {
+                currentThoughtProcess = [
+                  ...currentThoughtProcess,
+                  { step: event.step, details: event.details }
+                ];
+              } else if (event.type === "token") {
+                currentContent += event.token;
+              } else if (event.type === "error") {
+                toast.error(event.error || "Stream error");
+              }
+              
+              // Update cache with the new state
+              utils.chat.getSession.setData({ chatSessionId }, (oldData: any) => {
+                if (!oldData) return oldData;
+                return {
+                  ...oldData,
+                  messages: oldData.messages.map((msg: any) => 
+                    msg.id === newAssistantMessageId 
+                      ? { ...msg, content: currentContent, thoughtProcess: currentThoughtProcess } 
+                      : msg
+                  ),
+                };
+              });
+
+            } catch (err) {
+              console.error("Failed to parse event", part);
+            }
+          }
+        }
+      }
+      
+      // We refetch the session just to make sure we have the final citations properly joined
+      utils.chat.getSession.invalidate({ chatSessionId });
+    } catch (err: any) {
+      toast.error(err.message || "Failed to send message");
+    } finally {
+      setIsGenerating(false);
+      setActiveAssistantMessageId(null);
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -223,7 +308,7 @@ export default function ChatSessionPage({ params }: { params: Promise<{ id: stri
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [session?.messages, queryMutation.isPending]);
+  }, [session?.messages, isGenerating]);
 
   useEffect(() => {
     const filesToPoll = uploadingFiles.filter(f => f.status === 'processing' || f.status === 'embedding');
@@ -290,28 +375,21 @@ export default function ChatSessionPage({ params }: { params: Promise<{ id: stri
           </div>
         ) : (
           <div className="max-w-4xl mx-auto py-8 w-full">
-            {session?.messages.map((msg: any) => (
-              <ChatMessage
-                key={msg.id}
-                role={msg.role}
-                content={msg.content}
-                citations={msg.citations || []}
-                onCitationClick={setSelectedCitation}
-              />
-            ))}
-            {queryMutation.isPending && (
-              <div className="flex w-full px-4 py-6 text-sm">
-                <div className="flex w-full items-start gap-4">
-                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-border bg-card">
-                    <img src="/dox.svg" alt="Dox AI" className="h-6 w-6 animate-pulse" />
-                  </div>
-                  <div className="flex-1 space-y-2 px-1">
-                    <div className="font-semibold text-foreground">Dox Assistant</div>
-                    <div className="text-muted-foreground">Synthesizing information...</div>
-                  </div>
-                </div>
-              </div>
-            )}
+            {session?.messages.map((msg: any) => {
+              const isActive = msg.id === activeAssistantMessageId;
+              const liveThoughtProcess = msg.thoughtProcess;
+                
+              return (
+                <ChatMessage
+                  key={msg.id}
+                  role={msg.role}
+                  content={msg.content}
+                  thoughtProcess={liveThoughtProcess}
+                  citations={msg.citations || []}
+                  onCitationClick={setSelectedCitation}
+                />
+              );
+            })}
             <div ref={messagesEndRef} />
           </div>
         )}
@@ -426,11 +504,11 @@ export default function ChatSessionPage({ params }: { params: Promise<{ id: stri
           <div className="flex items-center gap-2 pr-1 pb-1 flex-none">
             <button
               onClick={handleSend}
-              disabled={!input.trim() || queryMutation.isPending || uploadingFiles.some(f => f.status === 'uploading' || f.status === 'processing' || f.status === 'embedding')}
+              disabled={!input.trim() || isGenerating || uploadingFiles.some(f => f.status === 'uploading' || f.status === 'processing' || f.status === 'embedding')}
               className="h-10 w-10 flex items-center justify-center bg-primary text-primary-foreground rounded-full hover:opacity-90 scale-100 active:scale-95 transition-transform disabled:opacity-50 flex-none"
               title={uploadingFiles.some(f => f.status === 'uploading' || f.status === 'processing' || f.status === 'embedding') ? "Waiting for files to finish processing..." : "Send"}
             >
-              {queryMutation.isPending ? (
+              {isGenerating ? (
                 <Loader2 size={20} className="animate-spin" />
               ) : (
                 <ArrowUp size={20} />
@@ -447,16 +525,30 @@ export default function ChatSessionPage({ params }: { params: Promise<{ id: stri
         {selectedCitation && (
           <motion.div
             initial={{ width: 0, opacity: 0 }}
-            animate={{ width: 380, opacity: 1 }}
+            animate={{ width: sidebarWidth, opacity: 1 }}
             exit={{ width: 0, opacity: 0 }}
-            transition={{ type: "spring", bounce: 0, duration: 0.4 }}
-            className="h-full shrink-0 z-40 hidden md:block border-l border-border bg-background"
+            transition={{ type: "spring", bounce: 0, duration: isResizingState ? 0 : 0.4 }}
+            className="h-full shrink-0 z-40 hidden md:block border-l border-border bg-background relative"
           >
-            <div className="w-[380px] h-full">
+            {/* Resizer Handle */}
+            <div 
+              className="absolute left-0 top-0 bottom-0 w-1.5 cursor-col-resize hover:bg-primary/50 transition-colors z-50 group"
+              onMouseDown={() => {
+                isResizing.current = true;
+                setIsResizingState(true);
+                document.body.style.cursor = 'col-resize';
+                document.body.style.userSelect = 'none';
+              }}
+            >
+              <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-0.5 h-8 bg-border group-hover:bg-primary/80 rounded-full" />
+            </div>
+
+            <div style={{ width: sidebarWidth }} className="h-full">
               <CitationPreview
+                index={selectedCitation.index}
                 chunkId={selectedCitation.chunkId}
                 sourceId={selectedCitation.sourceId}
-                index={selectedCitation.index}
+                score={selectedCitation.score}
                 onClose={() => setSelectedCitation(null)}
               />
             </div>

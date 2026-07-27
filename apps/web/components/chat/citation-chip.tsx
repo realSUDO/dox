@@ -14,10 +14,11 @@ interface CitationChipProps {
   displayLabel?: string | null;
   sourceId: string;
   chunkId: string;
-  onClick?: (citation: { index: number; displayLabel?: string | null; sourceId: string; chunkId: string }) => void;
+  score?: number | null;
+  onClick?: (citation: { index: number; displayLabel?: string | null; sourceId: string; chunkId: string; score?: number | null }) => void;
 }
 
-export function CitationChip({ index, displayLabel, sourceId, chunkId, onClick }: CitationChipProps) {
+export function CitationChip({ index, displayLabel, sourceId, chunkId, score, onClick }: CitationChipProps) {
   return (
     <TooltipProvider>
       <Tooltip>
@@ -27,7 +28,7 @@ export function CitationChip({ index, displayLabel, sourceId, chunkId, onClick }
             className="text-[10px] h-4 px-1 py-0 rounded-sm cursor-pointer mx-1 align-top relative -top-1 border border-primary/20 hover:border-primary/50 transition-colors"
             onClick={() => {
               if (onClick) {
-                onClick({ index, displayLabel, sourceId, chunkId });
+                onClick({ index, displayLabel, sourceId, chunkId, score });
               }
             }}
           >

@@ -1,5 +1,5 @@
 import { qdrantService, QdrantPoint } from "../qdrant";
-import { db } from "@repo/database";
+import { db, Prisma } from "@repo/database";
 import { embeddingService } from "../embedding";
 import { logger } from "@repo/logger";
 
@@ -23,7 +23,8 @@ export class Retriever {
   async retrieve(
     leafId: string,
     queries: string[],
-    limit: number = 20
+    limit: number = 20,
+    pageNumberFilter?: number | null
   ): Promise<RetrievedChunk[][]> {
     logger.debug(`[Retriever] Retrieving for ${queries.length} queries, limit=${limit}`);
 
@@ -48,7 +49,10 @@ export class Retriever {
           vector,
           limit,
           filter: {
-            must: [{ key: "leafId", match: { value: leafId } }],
+            must: [
+              { key: "leafId", match: { value: leafId } },
+              ...(pageNumberFilter ? [{ key: "pageNumber", match: { value: pageNumberFilter } }] : [])
+            ],
           },
         }).then(points => points.map(p => ({
           chunkId: p.payload.chunkId,
@@ -85,6 +89,7 @@ export class Retriever {
           WHERE c.leaf_id = ${leafId}
             AND c.status = 'indexed'
             AND c.content_tsv @@ plainto_tsquery('english', ${query})
+            ${pageNumberFilter ? Prisma.sql`AND c.page_number = ${pageNumberFilter}` : Prisma.empty}
           ORDER BY score DESC
           LIMIT ${limit};
         `.then((rows: any) => rows.map((r: any) => ({

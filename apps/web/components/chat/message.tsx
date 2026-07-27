@@ -19,9 +19,14 @@ interface MessageProps {
   onCitationClick?: (citation: { index: number; displayLabel?: string | null; sourceId: string; chunkId: string }) => void;
 }
 
-function ThoughtProcessWidget({ steps }: { steps: any[] }) {
-  const [isOpen, setIsOpen] = useState(false);
+function ThoughtProcessWidget({ steps, isActive }: { steps: any[], isActive?: boolean }) {
+  const [isOpen, setIsOpen] = useState(isActive ?? false);
   
+  // Keep it open if it becomes active
+  React.useEffect(() => {
+    if (isActive) setIsOpen(true);
+  }, [isActive]);
+
   if (!steps || steps.length === 0) return null;
 
   const totalDuration = steps.reduce((acc, step) => acc + (step.durationMs || 0), 0);
@@ -33,9 +38,11 @@ function ThoughtProcessWidget({ steps }: { steps: any[] }) {
         onClick={() => setIsOpen(!isOpen)}
         className="flex items-center gap-2 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors bg-accent/50 hover:bg-accent px-3 py-1.5 rounded-full border border-border/50"
       >
-        <Brain size={14} className={isOpen ? "text-primary" : ""} />
-        <span>{isOpen ? "Hide thought process" : `Thought process${seconds ? ` (${seconds}s)` : ""}`}</span>
-        {isOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+        <Brain size={14} className={cn(isOpen ? "text-primary" : "", isActive ? "animate-pulse" : "")} />
+        <span>
+          {isActive ? "Thinking..." : isOpen ? "Hide thought process" : `Thought process${seconds ? ` (${seconds}s)` : ""}`}
+        </span>
+        {isActive ? <Activity size={14} className="animate-pulse" /> : isOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
       </button>
 
       <AnimatePresence>
@@ -56,9 +63,9 @@ function ThoughtProcessWidget({ steps }: { steps: any[] }) {
                   </div>
                   {step.details && (
                     <div className="ml-3.5 text-[11px] text-muted-foreground bg-background/50 rounded-md px-3 py-2 border border-border/30">
-                      <pre className="font-mono whitespace-pre-wrap m-0">
-                        {JSON.stringify(step.details, null, 2)}
-                      </pre>
+                      <p className="whitespace-pre-wrap m-0">
+                        {typeof step.details === "string" ? step.details : JSON.stringify(step.details, null, 2)}
+                      </p>
                     </div>
                   )}
                 </div>
@@ -76,10 +83,31 @@ export function ChatMessage({ role, content, citations = [], thoughtProcess, onC
 
   const isUser = role === "user";
 
-  const preProcessedContent = React.useMemo(() => {
-    if (isUser || !citations.length) return content;
-    return content.replace(/\[Source\s+(\d+)\]/g, (match, idx) => `[${match}](#citation-${idx})`);
+  const { preProcessedContent, extractedThinking } = React.useMemo(() => {
+    let result = content;
+    let thinking = "";
+
+    if (result.includes("<think>")) {
+      const parts = result.split(/<think>|<\/think>/);
+      if (parts.length >= 2) {
+        thinking = parts[1] || "";
+        result = (parts[0] || "") + (parts[2] || "");
+      }
+    }
+
+    if (!isUser && citations.length > 0) {
+      result = result.replace(/\[Source\s+(\d+)\]/g, (match, idx) => `[${match}](#citation-${idx})`);
+    }
+    return { preProcessedContent: result.trim(), extractedThinking: thinking.trim() };
   }, [content, citations, isUser]);
+
+  const effectiveThoughtProcess = React.useMemo(() => {
+    const tp = [...(thoughtProcess || [])];
+    if (extractedThinking) {
+      tp.push({ step: "Reasoning", details: extractedThinking });
+    }
+    return tp;
+  }, [thoughtProcess, extractedThinking]);
 
   return (
     <div className="flex w-full px-4 py-4 text-sm">
@@ -101,8 +129,8 @@ export function ChatMessage({ role, content, citations = [], thoughtProcess, onC
               : "bg-card border border-border shadow-sm rounded-bl-sm"
           )}
         >
-          {!isUser && thoughtProcess && thoughtProcess.length > 0 && (
-            <ThoughtProcessWidget steps={thoughtProcess} />
+          {!isUser && effectiveThoughtProcess.length > 0 && (
+            <ThoughtProcessWidget steps={effectiveThoughtProcess} isActive={!preProcessedContent} />
           )}
 
           <div className={cn(
@@ -128,6 +156,7 @@ export function ChatMessage({ role, content, citations = [], thoughtProcess, onC
                             displayLabel={citation.displayLabel}
                             sourceId={citation.sourceId}
                             chunkId={citation.chunkId}
+                            score={citation.score}
                             onClick={onCitationClick}
                           />
                         );

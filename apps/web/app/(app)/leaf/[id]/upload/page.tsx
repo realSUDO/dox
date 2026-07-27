@@ -425,7 +425,7 @@ export default function KnowledgeBasePage({ params }: { params: Promise<{ id: st
               {previewSource?.type === 'link' && (
                 <div className="p-4 bg-background rounded-lg border border-border">
                   <p className="font-medium text-muted-foreground mb-2">Original URL</p>
-                  <a href={previewSource.sourceUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline break-all">
+                  <a href={previewSource.sourceUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline break-all">
                     {previewSource.sourceUrl}
                   </a>
                   {previewSource.sourceUrl && getYoutubeVideoId(previewSource.sourceUrl) && (
@@ -456,7 +456,7 @@ export default function KnowledgeBasePage({ params }: { params: Promise<{ id: st
                     <p>Your browser does not support PDFs. <a href={downloadData.url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">Download the PDF</a>.</p>
                   </object>
                 ) : (
-                  <div className="p-4 bg-red-50 text-red-600 rounded-lg border border-red-200">
+                  <div className="p-4 bg-destructive/10 text-destructive rounded-lg border border-destructive/20">
                     Failed to load PDF preview. {downloadError?.message}
                   </div>
                 )
@@ -464,11 +464,11 @@ export default function KnowledgeBasePage({ params }: { params: Promise<{ id: st
                 isDownloadLoading ? (
                   <div className="flex justify-center p-12"><Loader2 className="animate-spin text-primary w-8 h-8 opacity-50" /></div>
                 ) : downloadData?.url ? (
-                  <div className="flex justify-center bg-gray-50 p-4 rounded-lg border border-border">
+                  <div className="flex justify-center bg-accent/20 p-4 rounded-lg border border-border">
                     <img src={downloadData.url} alt="Preview" className="max-w-full h-auto max-h-[600px] rounded object-contain" />
                   </div>
                 ) : (
-                  <div className="p-4 bg-red-50 text-red-600 rounded-lg border border-red-200">
+                  <div className="p-4 bg-destructive/10 text-destructive rounded-lg border border-destructive/20">
                     Failed to load image preview. {downloadError?.message}
                   </div>
                 )

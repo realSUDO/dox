@@ -17,6 +17,9 @@ export interface RAGQueryOptions {
   chatSessionId?: string; // If resuming a session
   piiMap?: Map<string, string>;
   originalQuery?: string;
+  assistantMessageId?: string; // If provided, updates thoughtProcess in real-time
+  onProgress?: (step: string, details?: string) => void;
+  onToken?: (token: string, isThinking: boolean) => void;
 }
 
 export interface RAGResponse extends GenerationResult {
@@ -40,6 +43,18 @@ export class RAGService {
 
     const thoughtProcess: any[] = [];
     const startTime = Date.now();
+    
+    const emitProgress = async (step?: string, details?: string) => {
+      if (options.onProgress && step) {
+        options.onProgress(step, details);
+      }
+      if (options.assistantMessageId) {
+        await db.chatMessage.update({
+          where: { id: options.assistantMessageId },
+          data: { thoughtProcess },
+        }).catch(err => logger.error(`[RAGService] Failed to emit progress: ${err.message}`));
+      }
+    };
 
     // 1. Fetch Chat History (if session exists)
     let chatSessionId = options.chatSessionId;
@@ -101,15 +116,14 @@ export class RAGService {
     // 2. Query Rewrite & Analysis
     const rewriteStartTime = Date.now();
     const rewrite = await queryRewriter.rewrite(options.query, historyContext, projectContext);
+    const rewriteStep = "Query Analysis & Rewrite";
+    const rewriteDetails = `Re-wrote query to: "${rewrite.rewrittenQuery}". ${rewrite.subQueries.length > 0 ? `Broke down into ${rewrite.subQueries.length} sub-queries. ` : ""}${rewrite.pageNumberFilter ? `Filtering for page ${rewrite.pageNumberFilter}. ` : ""}`;
     thoughtProcess.push({
-      step: "Query Analysis & Rewrite",
+      step: rewriteStep,
       durationMs: Date.now() - rewriteStartTime,
-      details: {
-        rewrittenQuery: rewrite.rewrittenQuery,
-        subQueries: rewrite.subQueries,
-        hydePassage: rewrite.hydePassage ? "Generated hypothetical document." : null
-      }
+      details: rewriteDetails
     });
+    await emitProgress(rewriteStep, rewriteDetails);
     
     // Gather all queries to search for
     const activeQueries = [rewrite.rewrittenQuery, rewrite.hydePassage, ...rewrite.subQueries];
@@ -127,7 +141,7 @@ export class RAGService {
       attempts++;
       logger.debug(`[RAGService] Retrieval attempt ${attempts} (limit: ${limit})`);
       
-      const retrievalLists = await retriever.retrieve(options.leafId, activeQueries, limit);
+      const retrievalLists = await retriever.retrieve(options.leafId, activeQueries, limit, rewrite.pageNumberFilter);
       const rrfChunks = rrf.merge(retrievalLists, 30 + (attempts * 10));
 
       // Early exit: if RRF found 0 chunks, there's nothing in the KB to retrieve
@@ -148,20 +162,18 @@ export class RAGService {
 
       const rerankedChunks = await reranker.rerank(rewrite.rewrittenQuery, rrfChunks, 8 + (attempts * 2));
       
-      // On the last attempt, force-pass all chunks rather than returning nothing
+      // On the last attempt, or if a specific page was requested, force-pass all chunks
       const isLastAttempt = attempts >= maxAttempts;
-      const cragResult = cragEvaluator.evaluate(rerankedChunks, { forceAll: isLastAttempt });
+      const cragResult = cragEvaluator.evaluate(rerankedChunks, { forceAll: isLastAttempt || !!rewrite.pageNumberFilter });
       finalChunks = cragResult.passed;
       
+      const retStep = `Retrieval & Evaluation (Attempt ${attempts})`;
+      const retDetails = `Retrieved ${rrfChunks.length} chunks. ${finalChunks.length} chunks passed relevance evaluation. ${cragResult.needsFallback ? "Expanding search because chunks were not relevant enough." : "Found highly relevant information."}`;
       thoughtProcess.push({
-        step: `Retrieval & Evaluation (Attempt ${attempts})`,
-        details: {
-          retrievedChunks: rrfChunks.length,
-          passedChunks: finalChunks.length,
-          fallbackTriggered: cragResult.needsFallback,
-          forcedAll: isLastAttempt || (rrfChunks.length === prevUniqueCount)
-        }
+        step: retStep,
+        details: retDetails
       });
+      await emitProgress(retStep, retDetails);
       
       if (!cragResult.needsFallback) {
         break; // We have enough chunks
@@ -185,16 +197,17 @@ export class RAGService {
       context, 
       chatHistory,
       rewrite.expectedLength,
-      projectContext
+      projectContext,
+      options.onToken
     );
+    const genStep = "Answer Generation";
+    const genDetails = `Synthesizing final answer from ${finalChunks.length} chunks using ${generation.usage.promptTokens + generation.usage.completionTokens} tokens. Generated ${generation.citations.length} citations.`;
     thoughtProcess.push({
-      step: "Answer Generation",
+      step: genStep,
       durationMs: Date.now() - genStartTime,
-      details: {
-        tokens: generation.usage.promptTokens + generation.usage.completionTokens,
-        citationsGenerated: generation.citations.length
-      }
+      details: genDetails
     });
+    await emitProgress(genStep, genDetails);
 
     // 8.5 Output Guardrails
     const outputGuard = await guardrailService.checkOutput(generation.answer, {
@@ -205,31 +218,46 @@ export class RAGService {
     const safeAnswer = outputGuard.safeAnswer;
 
     // 9. Persist to Database
-    // Insert user message
-    await db.chatMessage.create({
-      data: {
-        chatSessionId,
-        role: "user",
-        content: options.originalQuery ?? options.query,
-      },
-    });
+    let assistantMsgId = options.assistantMessageId;
 
-    const assistantMsg = await db.chatMessage.create({
-      data: {
-        chatSessionId,
-        role: "assistant",
-        content: safeAnswer,
-        promptTokens: generation.usage.promptTokens,
-        completionTokens: generation.usage.completionTokens,
-        thoughtProcess,
-      },
-    });
+    if (options.assistantMessageId) {
+      await db.chatMessage.update({
+        where: { id: options.assistantMessageId },
+        data: {
+          content: safeAnswer,
+          promptTokens: generation.usage.promptTokens,
+          completionTokens: generation.usage.completionTokens,
+          thoughtProcess,
+        },
+      });
+    } else {
+      // Insert user message
+      await db.chatMessage.create({
+        data: {
+          chatSessionId,
+          role: "user",
+          content: options.originalQuery ?? options.query,
+        },
+      });
+
+      const newMsg = await db.chatMessage.create({
+        data: {
+          chatSessionId,
+          role: "assistant",
+          content: safeAnswer,
+          promptTokens: generation.usage.promptTokens,
+          completionTokens: generation.usage.completionTokens,
+          thoughtProcess,
+        },
+      });
+      assistantMsgId = newMsg.id;
+    }
 
     // Insert citations
-    if (generation.citations.length > 0) {
+    if (generation.citations.length > 0 && assistantMsgId) {
       await db.citation.createMany({
         data: generation.citations.map((c) => ({
-          messageId: assistantMsg.id,
+          messageId: assistantMsgId!,
           chunkId: c.chunkId,
           sourceId: c.sourceId,
           index: c.index,
@@ -256,7 +284,7 @@ export class RAGService {
       ...generation,
       answer: safeAnswer,
       chatSessionId,
-      messageId: assistantMsg.id,
+      messageId: assistantMsgId!,
       thoughtProcess,
     };
   }

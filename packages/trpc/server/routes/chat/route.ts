@@ -10,6 +10,7 @@ export const chatRouter = router({
         leafId: z.string(),
         query: z.string().min(1).max(2000),
         chatSessionId: z.string().optional(),
+        assistantMessageId: z.string().uuid().optional(),
       })
     )
     .mutation(async ({ ctx, input }) => {
@@ -50,15 +51,47 @@ export const chatRouter = router({
         });
       }
 
-      // 3. Call RAG Pipeline
+      // 3. Pre-create DB messages if assistantMessageId provided
+      let currentSessionId = input.chatSessionId;
+      if (input.assistantMessageId) {
+        if (!currentSessionId) {
+          const session = await ctx.db.chatSession.create({
+            data: { leafId: input.leafId, userId: ctx.user.id, title: input.query.substring(0, 50) }
+          });
+          currentSessionId = session.id;
+        }
+
+        // Insert user message
+        await ctx.db.chatMessage.create({
+          data: {
+            chatSessionId: currentSessionId,
+            role: "user",
+            content: input.query,
+          }
+        });
+
+        // Insert empty assistant message to track thought process
+        await ctx.db.chatMessage.create({
+          data: {
+            id: input.assistantMessageId,
+            chatSessionId: currentSessionId,
+            role: "assistant",
+            content: "",
+            thoughtProcess: [],
+          }
+        });
+      }
+
+      // 4. Call RAG Pipeline
       try {
         const response = await ragService.query({
           leafId: input.leafId,
           userId: ctx.user.id,
           query: guardrailInput.sanitizedQuery,
-          chatSessionId: input.chatSessionId,
+          chatSessionId: currentSessionId,
           piiMap: guardrailInput.piiMap,
           originalQuery: input.query,
+          assistantMessageId: input.assistantMessageId,
         });
 
         return response;
@@ -68,6 +101,16 @@ export const chatRouter = router({
           message: error.message || "Failed to process RAG query",
         });
       }
+    }),
+
+  getThoughtProcess: protectedProcedure
+    .input(z.object({ messageId: z.string().uuid() }))
+    .query(async ({ ctx, input }) => {
+      const msg = await ctx.db.chatMessage.findUnique({
+        where: { id: input.messageId },
+        select: { thoughtProcess: true, content: true }
+      });
+      return msg;
     }),
 
   listSessions: protectedProcedure
