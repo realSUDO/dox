@@ -37,21 +37,29 @@ export class Reranker {
       const reranked: RerankedChunk[] = [];
 
       for (const chunk of chunks) {
-        let cleanContent = chunk.content;
-        cleanContent = cleanContent.replace(/\[Leaf Summary:.*?\]\n\n/s, "");
-        cleanContent = cleanContent.replace(/\[File Path:.*?\]\n\n/s, "");
+        try {
+          let cleanContent = chunk.content;
+          cleanContent = cleanContent.replace(/\[Leaf Summary:.*?\]\n\n/s, "");
+          cleanContent = cleanContent.replace(/\[File Path:.*?\]\n\n/s, "");
 
-        const inputs = tokenizer(query, { text_pair: cleanContent });
-        const { logits } = await model(inputs);
-        
-        // Logits is a Float32Array
-        const logit = logits.data[0] ?? 0;
-        const score = 1 / (1 + Math.exp(-logit)); // Sigmoid function
-        
-        reranked.push({
-          ...chunk,
-          rerankScore: score,
-        });
+          // CRITICAL: truncation: true prevents ONNX crash when query+chunk > 512 tokens
+          const inputs = tokenizer(query, { text_pair: cleanContent, truncation: true, max_length: 512 });
+          const { logits } = await model(inputs);
+          
+          const logit = logits.data[0] ?? 0;
+          const score = 1 / (1 + Math.exp(-logit)); // Sigmoid → [0, 1]
+          
+          reranked.push({
+            ...chunk,
+            rerankScore: score,
+          });
+        } catch (err: any) {
+          logger.warn(`[Reranker] Failed to rerank chunk ${chunk.chunkId}: ${err.message}`);
+          reranked.push({
+            ...chunk,
+            rerankScore: 0, // Lowest priority — CRAG will likely filter it
+          });
+        }
       }
 
       reranked.sort((a, b) => b.rerankScore - a.rerankScore);

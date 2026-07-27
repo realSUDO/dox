@@ -105,8 +105,9 @@ export class RAGService {
     // 3-6. Retrieval, RRF, Rerank, and CRAG Fallback Loop
     let finalChunks: any[] = [];
     let attempts = 0;
-    const maxAttempts = 5;
+    const maxAttempts = 3;
     let limit = 20;
+    let prevUniqueCount = -1;
 
     while (attempts < maxAttempts) {
       attempts++;
@@ -114,6 +115,21 @@ export class RAGService {
       
       const retrievalLists = await retriever.retrieve(options.leafId, activeQueries, limit);
       const rrfChunks = rrf.merge(retrievalLists, 30 + (attempts * 10));
+
+      // Early exit: if RRF found 0 chunks, there's nothing in the KB to retrieve
+      if (rrfChunks.length === 0) {
+        logger.warn(`[RAGService] No chunks retrieved at all — KB may be empty for this leaf.`);
+        break;
+      }
+
+      // Early exit: if widening the search didn't find any NEW unique chunks, stop
+      if (rrfChunks.length === prevUniqueCount) {
+        logger.warn(`[RAGService] No new chunks found by widening search (still ${rrfChunks.length}). Stopping retries.`);
+        // Use whatever we have from last rerank
+        break;
+      }
+      prevUniqueCount = rrfChunks.length;
+
       const rerankedChunks = await reranker.rerank(rewrite.rewrittenQuery, rrfChunks, 8 + (attempts * 2));
       
       const cragResult = cragEvaluator.evaluate(rerankedChunks);
