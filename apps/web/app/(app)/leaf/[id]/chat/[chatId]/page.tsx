@@ -299,29 +299,6 @@ export default function ChatSessionPage({ params }: { params: Promise<{ id: stri
           </div>
         )}
       </div>
-
-      {/* Right Sidebar for Citation Preview */}
-      <AnimatePresence>
-        {selectedCitation && (
-          <motion.div
-            initial={{ width: 0, opacity: 0 }}
-            animate={{ width: 380, opacity: 1 }}
-            exit={{ width: 0, opacity: 0 }}
-            transition={{ type: "spring", bounce: 0, duration: 0.4 }}
-            className="h-full shrink-0 z-40 hidden md:block border-l border-border bg-background"
-          >
-            <div className="w-[380px] h-full">
-              <CitationPreview
-                chunkId={selectedCitation.chunkId}
-                sourceId={selectedCitation.sourceId}
-                index={selectedCitation.index}
-                onClose={() => setSelectedCitation(null)}
-              />
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
       {/* Floating Bottom Composer */}
       <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center w-full max-w-3xl px-4 md:px-0 z-50">
         
@@ -447,6 +424,28 @@ export default function ChatSessionPage({ params }: { params: Promise<{ id: stri
       </div>
       {/* End Main Chat Area */}
       </div>
+
+      {/* Right Sidebar for Citation Preview — MUST be sibling of main chat column */}
+      <AnimatePresence>
+        {selectedCitation && (
+          <motion.div
+            initial={{ width: 0, opacity: 0 }}
+            animate={{ width: 380, opacity: 1 }}
+            exit={{ width: 0, opacity: 0 }}
+            transition={{ type: "spring", bounce: 0, duration: 0.4 }}
+            className="h-full shrink-0 z-40 hidden md:block border-l border-border bg-background"
+          >
+            <div className="w-[380px] h-full">
+              <CitationPreview
+                chunkId={selectedCitation.chunkId}
+                sourceId={selectedCitation.sourceId}
+                index={selectedCitation.index}
+                onClose={() => setSelectedCitation(null)}
+              />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

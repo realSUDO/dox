@@ -198,6 +198,7 @@ export class RAGService {
           messageId: assistantMsg.id,
           chunkId: c.chunkId,
           sourceId: c.sourceId,
+          index: c.index,
           score: c.score,
           displayLabel: c.displayLabel,
         })),

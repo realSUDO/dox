@@ -191,6 +191,7 @@ model Citation {
   messageId    String   @map("message_id")
   chunkId      String   @map("chunk_id")
   sourceId     String   @map("source_id")
+  index        Int      @default(1)
   score        Float?
   displayLabel String?  @map("display_label") @db.VarChar(50)
   createdAt    DateTime @default(now()) @map("created_at")
