@@ -22,6 +22,7 @@ export interface RAGQueryOptions {
 export interface RAGResponse extends GenerationResult {
   chatSessionId: string;
   messageId: string;
+  thoughtProcess?: any[];
 }
 
 export class RAGService {
@@ -36,6 +37,9 @@ export class RAGService {
     if (!hasEnough) {
       throw new Error("OUT_OF_CREDITS");
     }
+
+    const thoughtProcess: any[] = [];
+    const startTime = Date.now();
 
     // 1. Fetch Chat History (if session exists)
     let chatSessionId = options.chatSessionId;
@@ -95,7 +99,17 @@ export class RAGService {
     }
 
     // 2. Query Rewrite & Analysis
+    const rewriteStartTime = Date.now();
     const rewrite = await queryRewriter.rewrite(options.query, historyContext, projectContext);
+    thoughtProcess.push({
+      step: "Query Analysis & Rewrite",
+      durationMs: Date.now() - rewriteStartTime,
+      details: {
+        rewrittenQuery: rewrite.rewrittenQuery,
+        subQueries: rewrite.subQueries,
+        hydePassage: rewrite.hydePassage ? "Generated hypothetical document." : null
+      }
+    });
     
     // Gather all queries to search for
     const activeQueries = [rewrite.rewrittenQuery, rewrite.hydePassage, ...rewrite.subQueries];
@@ -139,6 +153,16 @@ export class RAGService {
       const cragResult = cragEvaluator.evaluate(rerankedChunks, { forceAll: isLastAttempt });
       finalChunks = cragResult.passed;
       
+      thoughtProcess.push({
+        step: `Retrieval & Evaluation (Attempt ${attempts})`,
+        details: {
+          retrievedChunks: rrfChunks.length,
+          passedChunks: finalChunks.length,
+          fallbackTriggered: cragResult.needsFallback,
+          forcedAll: isLastAttempt || (rrfChunks.length === prevUniqueCount)
+        }
+      });
+      
       if (!cragResult.needsFallback) {
         break; // We have enough chunks
       }
@@ -155,6 +179,7 @@ export class RAGService {
     const context = contextBuilder.build(finalChunks);
 
     // 8. LLM Generation
+    const genStartTime = Date.now();
     const generation = await generator.generate(
       rewrite.rewrittenQuery, 
       context, 
@@ -162,6 +187,14 @@ export class RAGService {
       rewrite.expectedLength,
       projectContext
     );
+    thoughtProcess.push({
+      step: "Answer Generation",
+      durationMs: Date.now() - genStartTime,
+      details: {
+        tokens: generation.usage.promptTokens + generation.usage.completionTokens,
+        citationsGenerated: generation.citations.length
+      }
+    });
 
     // 8.5 Output Guardrails
     const outputGuard = await guardrailService.checkOutput(generation.answer, {
@@ -188,6 +221,7 @@ export class RAGService {
         content: safeAnswer,
         promptTokens: generation.usage.promptTokens,
         completionTokens: generation.usage.completionTokens,
+        thoughtProcess,
       },
     });
 
@@ -223,6 +257,7 @@ export class RAGService {
       answer: safeAnswer,
       chatSessionId,
       messageId: assistantMsg.id,
+      thoughtProcess,
     };
   }
 

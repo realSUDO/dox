@@ -177,6 +177,7 @@ model ChatMessage {
   content          String
   promptTokens     Int?     @map("prompt_tokens")
   completionTokens Int?     @map("completion_tokens")
+  thoughtProcess   Json?    @map("thought_process")
   createdAt        DateTime @default(now()) @map("created_at")
 
   chatSession ChatSession @relation(fields: [chatSessionId], references: [id], onDelete: Cascade)

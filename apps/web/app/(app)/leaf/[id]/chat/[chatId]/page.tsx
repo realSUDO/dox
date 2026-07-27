@@ -46,8 +46,25 @@ export default function ChatSessionPage({ params }: { params: Promise<{ id: stri
 
   const queryMutation = trpc.chat.query.useMutation({
     onSuccess: (data: any) => {
-      // Refresh the session to get the latest messages
-      utils.chat.getSession.invalidate({ chatSessionId });
+      // Smoothly append the assistant message without reloading the session
+      utils.chat.getSession.setData({ chatSessionId }, (oldData: any) => {
+        if (!oldData) return oldData;
+        return {
+          ...oldData,
+          messages: [
+            ...oldData.messages,
+            {
+              id: data.messageId,
+              chatSessionId,
+              role: "assistant",
+              content: data.answer,
+              thoughtProcess: data.thoughtProcess,
+              createdAt: new Date().toISOString(),
+              citations: data.citations || [],
+            }
+          ]
+        };
+      });
     },
     onError: (error: any) => {
       if (error.message?.includes("OUT_OF_CREDITS")) {

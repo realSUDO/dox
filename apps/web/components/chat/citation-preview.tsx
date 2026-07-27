@@ -21,6 +21,7 @@ export function CitationPreview({ chunkId, sourceId, index, onClose }: CitationP
   );
 
   const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
+  const [showInlinePreview, setShowInlinePreview] = useState(false);
   
   const getDownloadUrlMutation = trpc.sources.getDownloadUrl.useMutation({
     onSuccess: (data) => {
@@ -31,13 +32,31 @@ export function CitationPreview({ chunkId, sourceId, index, onClose }: CitationP
 
   const handleOpenSource = () => {
     if (!chunk?.source) return;
+    
+    // For PDFs, we want to try inline preview first
+    const isPdf = chunk.source.type?.includes("pdf");
+    
     if (chunk.source.sourceUrl) {
-      window.open(chunk.source.sourceUrl, "_blank");
+      if (isPdf) {
+        setShowInlinePreview(true);
+      } else {
+        window.open(chunk.source.sourceUrl, "_blank");
+      }
     } else if (chunk.source.storageKey) {
       if (downloadUrl) {
-        window.open(downloadUrl, "_blank");
+        if (isPdf) {
+          setShowInlinePreview(true);
+        } else {
+          window.open(downloadUrl, "_blank");
+        }
       } else {
-        getDownloadUrlMutation.mutate({ sourceId: chunk.source.id });
+        getDownloadUrlMutation.mutate({ sourceId: chunk.source.id }, {
+          onSuccess: (data) => {
+            if (isPdf) {
+              setShowInlinePreview(true);
+            }
+          }
+        });
       }
     }
   };
@@ -131,14 +150,34 @@ export function CitationPreview({ chunkId, sourceId, index, onClose }: CitationP
               >
                 {getDownloadUrlMutation.isPending ? (
                   <Loader2 size={16} className="animate-spin" />
+                ) : chunk.source?.type?.includes("pdf") ? (
+                  <FileText size={16} />
                 ) : chunk.source?.sourceUrl ? (
                   <ExternalLink size={16} />
                 ) : (
                   <DownloadCloud size={16} />
                 )}
-                {chunk.source?.sourceUrl ? "Open Original Link" : "View Original File"}
+                {chunk.source?.type?.includes("pdf") ? "View Original File (Inline)" : chunk.source?.sourceUrl ? "Open Original Link" : "Download Original File"}
               </button>
             </div>
+
+            {/* Inline Preview */}
+            <AnimatePresence>
+              {showInlinePreview && (downloadUrl || chunk.source?.sourceUrl) && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "400px" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="w-full border border-border/50 rounded-xl overflow-hidden mt-6 bg-accent/20"
+                >
+                  <iframe 
+                    src={`${downloadUrl || chunk.source?.sourceUrl}${chunk.pageNumber ? `#page=${chunk.pageNumber}` : ""}`}
+                    className="w-full h-full border-0"
+                    title="Document Preview"
+                  />
+                </motion.div>
+              )}
+            </AnimatePresence>
 
           </div>
         ) : null}
