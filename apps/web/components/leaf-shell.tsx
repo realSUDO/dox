@@ -131,7 +131,7 @@ export function LeafShell({
         }`}
       >
         <div className="h-20 flex items-center px-8 border-b border-border shrink-0 gap-4">
-          <Link href="/" className="flex items-center gap-4 hover:opacity-80 transition-opacity">
+          <Link href="/dashboard" className="flex items-center gap-4 hover:opacity-80 transition-opacity">
             <img src="/dox.svg" alt="Dox" className="w-11 h-11" />
             <span className="font-bold text-3xl tracking-tight">Dox</span>
           </Link>
