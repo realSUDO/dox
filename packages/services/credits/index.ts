@@ -1,10 +1,11 @@
-import { db } from "@repo/database";
+// DB imported dynamically in methods to avoid esbuild initialization order issues in bundled workers
 
 export class CreditService {
   /**
    * Check if a user has at least `amount` tokens in their balance.
    */
   async hasEnoughTokens(userId: string, amount: number): Promise<boolean> {
+    const { db } = await import("@repo/database");
     const user = await db.user.findUnique({
       where: { id: userId },
       select: { tokenBalance: true },
@@ -19,6 +20,7 @@ export class CreditService {
    * Throws an error if they don't have enough.
    */
   async deductTokens(userId: string, amount: number): Promise<{ success: boolean; newBalance: number }> {
+    const { db } = await import("@repo/database");
     // We use an atomic decrement. Prisma handles this safely.
     // However, to prevent going below 0, we can do a raw query or fetch first.
     // For simplicity, we'll fetch first, check, then atomic decrement with an optimistic lock or just rely on the DB.
@@ -55,6 +57,7 @@ export class CreditService {
    * Gets the current user balance
    */
   async getBalance(userId: string): Promise<number> {
+    const { db } = await import("@repo/database");
     const user = await db.user.findUnique({
       where: { id: userId },
       select: { tokenBalance: true },
