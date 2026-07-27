@@ -152,6 +152,12 @@ export const sourcesRouter = router({
       const { projectService } = await import("@repo/services");
       await projectService.assertMembership(ctx.user.id, chunk.leafId, ["viewer", "editor", "owner"]);
 
-      return chunk;
+      return {
+        ...chunk,
+        source: chunk.source ? {
+          ...chunk.source,
+          fileSizeBytes: chunk.source.fileSizeBytes != null ? Number(chunk.source.fileSizeBytes) : null,
+        } : null
+      };
     }),
 });
