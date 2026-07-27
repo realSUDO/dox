@@ -1,4 +1,4 @@
-import { db } from "../connection";
+import { db } from "@repo/database";
 
 export class CreditService {
   /**
