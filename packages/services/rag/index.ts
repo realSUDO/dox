@@ -122,24 +122,28 @@ export class RAGService {
         break;
       }
 
-      // Early exit: if widening the search didn't find any NEW unique chunks, stop
+      // Early exit: if widening the search didn't find any NEW unique chunks, stop retrying
+      // but force-pass everything we have — the user's KB is small, give them SOMETHING
       if (rrfChunks.length === prevUniqueCount) {
-        logger.warn(`[RAGService] No new chunks found by widening search (still ${rrfChunks.length}). Stopping retries.`);
-        // Use whatever we have from last rerank
+        logger.warn(`[RAGService] No new chunks found by widening search (still ${rrfChunks.length}). Force-passing all.`);
+        const rerankedAll = await reranker.rerank(rewrite.rewrittenQuery, rrfChunks, 8 + (attempts * 2));
+        finalChunks = cragEvaluator.evaluate(rerankedAll, { forceAll: true }).passed;
         break;
       }
       prevUniqueCount = rrfChunks.length;
 
       const rerankedChunks = await reranker.rerank(rewrite.rewrittenQuery, rrfChunks, 8 + (attempts * 2));
       
-      const cragResult = cragEvaluator.evaluate(rerankedChunks);
+      // On the last attempt, force-pass all chunks rather than returning nothing
+      const isLastAttempt = attempts >= maxAttempts;
+      const cragResult = cragEvaluator.evaluate(rerankedChunks, { forceAll: isLastAttempt });
       finalChunks = cragResult.passed;
       
       if (!cragResult.needsFallback) {
         break; // We have enough chunks
       }
       
-      if (attempts < maxAttempts) {
+      if (!isLastAttempt) {
         logger.warn(`[RAGService] CRAG fallback triggered (attempt ${attempts}). Only ${finalChunks.length} chunks passed. Expanding search.`);
         limit += 20; // Widen search space for next attempt
       } else {

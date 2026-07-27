@@ -46,8 +46,9 @@ export class Reranker {
           const inputs = tokenizer(query, { text_pair: cleanContent, truncation: true, max_length: 512 });
           const { logits } = await model(inputs);
           
-          const logit = logits.data[0] ?? 0;
-          const score = 1 / (1 + Math.exp(-logit)); // Sigmoid → [0, 1]
+          // Use raw logit as score — ms-marco logits are NOT calibrated probabilities.
+          // Higher logit = more relevant. Range is roughly [-12, +12].
+          const score = logits.data[0] ?? -Infinity;
           
           reranked.push({
             ...chunk,
