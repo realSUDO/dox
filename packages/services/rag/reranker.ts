@@ -1,23 +1,24 @@
 import { RRFChunk } from "./rrf";
 import { env } from "../env";
 import { logger } from "@repo/logger";
-import { pipeline } from "@xenova/transformers";
+import { AutoModelForSequenceClassification, AutoTokenizer } from "@xenova/transformers";
 
 export interface RerankedChunk extends RRFChunk {
   rerankScore: number;
 }
 
 export class Reranker {
-  private localPipeline: any = null;
+  private model: any = null;
+  private tokenizer: any = null;
 
   private async getLocalPipeline() {
-    if (!this.localPipeline) {
+    if (!this.model || !this.tokenizer) {
       logger.info("[Reranker] Initializing local cross-encoder model...");
-      // The first call downloads the model
-      this.localPipeline = await pipeline("text-classification", "Xenova/ms-marco-MiniLM-L-6-v2");
+      this.model = await AutoModelForSequenceClassification.from_pretrained("Xenova/ms-marco-MiniLM-L-6-v2");
+      this.tokenizer = await AutoTokenizer.from_pretrained("Xenova/ms-marco-MiniLM-L-6-v2");
       logger.info("[Reranker] Local cross-encoder model ready.");
     }
-    return this.localPipeline;
+    return { model: this.model, tokenizer: this.tokenizer };
   }
 
   async rerank(
@@ -32,26 +33,20 @@ export class Reranker {
     const mode = env.RERANKER || "local";
 
     if (mode === "local") {
-      const pipe = await this.getLocalPipeline();
+      const { model, tokenizer } = await this.getLocalPipeline();
       const reranked: RerankedChunk[] = [];
 
       for (const chunk of chunks) {
-        // Strip noisy [Leaf Summary...] and [File Path...] that chunk worker baked in, as they ruin relevance scoring
         let cleanContent = chunk.content;
         cleanContent = cleanContent.replace(/\[Leaf Summary:.*?\]\n\n/s, "");
         cleanContent = cleanContent.replace(/\[File Path:.*?\]\n\n/s, "");
 
-        // Cross-encoders expect the input as a single string separated by a token (usually [SEP] or similar depending on model).
-        // Xenova pipelines typically handle string pairs if passed as {text, text_pair} or array, but for cross-encoder/ms-marco-MiniLM-L-6-v2 
-        // concatenating with [SEP] is safer, or passing as text/text_pair args.
-        // Actually, the pipeline for text-classification with cross-encoder takes text and text_pair args: pipe(query, cleanContent)
-        // Let's verify the API. Wait, I wrote in the plan to use `${query} [SEP] ${chunk.content}`, { topk: null }
-        // Let's stick to the plan.
-        const out = await pipe(`${query} [SEP] ${cleanContent}`, { topk: null });
+        const inputs = tokenizer(query, { text_pair: cleanContent });
+        const { logits } = await model(inputs);
         
-        // The output is an array of objects like [{ label: "LABEL_0", score: 0.99 }]
-        // For cross-encoders, the score is directly usable, usually index 0 is the relevance
-        const score = out[0]?.score ?? 0;
+        // Logits is a Float32Array
+        const logit = logits.data[0] ?? 0;
+        const score = 1 / (1 + Math.exp(-logit)); // Sigmoid function
         
         reranked.push({
           ...chunk,

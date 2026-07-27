@@ -40,7 +40,7 @@ export class Retriever {
 
     // 1. Qdrant Dense Search
     for (let i = 0; i < uniqueQueries.length; i++) {
-      const vector = embeddings[i]?.[0];
+      const vector = embeddings[i]?.vectors?.[0];
       if (!vector) continue;
 
       searchPromises.push(
